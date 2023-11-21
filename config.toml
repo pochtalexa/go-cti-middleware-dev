@@ -1,0 +1,22 @@
+[Settings]
+# LogLevel = "debug"
+LogLevel = "info"
+UseAuth = false
+
+[CtiAPI]
+Scheme = "ws"
+Path = "/ws"
+Host = "192.168.223.50"
+Port = "8098"
+
+[HttpAPI]
+Scheme = "http"
+Host = "localhost"
+Port = "9595"
+
+[DB]
+Host = "localhost"
+Port = "5432"
+DBname = "cti"
+User = "cti"
+Password = "cti"
