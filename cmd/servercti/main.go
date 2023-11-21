@@ -18,6 +18,7 @@ func main() {
 	// TODO sync.Mutex
 	// TODO Обработка ошибок
 	// TODO обработка ответа CTI на отправленные команды
+	// TODO на перспективу использовать Redis
 
 	appConfig := config.NewConfig()
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
@@ -29,11 +30,11 @@ func main() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	dbConn, err := storage.InitConnDB(appConfig)
+	st, err := storage.InitConnDB(appConfig)
 	if err != nil {
 		log.Fatal().Err(err).Msg("ApplyMigrations")
 	}
-	defer dbConn.Close()
+	defer st.DB.Close()
 
 	err = migrations.ApplyMigrations()
 	if err != nil {

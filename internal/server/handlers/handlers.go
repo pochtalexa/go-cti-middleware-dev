@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/auth"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/cti"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 	"github.com/rs/zerolog/log"
 	"net/http"
+	"strconv"
 )
 
 // ControlHandler принимем команду по http API и вызваем соотвествующий медот CTI API
@@ -113,5 +115,41 @@ func EventsHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	log.Info().Msg("GetEventsHandler - ok")
 
+	return
+}
+
+func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
+	const op = "handlers.RegisterUserHandler"
+
+	reqBody := storage.NewRegister()
+
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&reqBody); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Error().Err(err).Msg(op)
+		return
+	}
+
+	id, err := auth.RegisterNewUser(reqBody.Login, reqBody.Password)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Error().Err(err).Msg(op)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	resBody := storage.NewRegisterSuccess()
+	resBody.Id = id
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(resBody); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Error().Err(err).Msg(op)
+		return
+	}
+
+	log.Debug().Str("id", strconv.FormatInt(id, 10)).Msg(op)
 	return
 }

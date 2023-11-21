@@ -15,16 +15,16 @@ func RegisterNewUser(login string, pass string) (int64, error) {
 	// Создаём локальный объект логгера с доп. полями, содержащими полезную инфу
 	log := log.With().Str("op", op).Str("login", login).Logger()
 
-	log.Info().Msg("registering user")
+	log.Debug().Msg("registering user")
 
-	// Генерируем хэш и соль для пароля.
+	// Генерируем хэш и соль для пароля
 	passHash, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
 	if err != nil {
 		return -1, fmt.Errorf("%s: %w", op, err)
 	}
 
 	// Сохраняем пользователя в БД
-	id, err := storage.SaveUser(login, passHash)
+	id, err := storage.Storage.SaveUser(login, passHash)
 	if err != nil {
 		return -1, fmt.Errorf("%s: %w", op, err)
 	}

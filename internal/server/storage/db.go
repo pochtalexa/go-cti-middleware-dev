@@ -2,23 +2,54 @@ package storage
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
 )
 
-var DBconn *sql.DB
+var Storage = NewStorage()
 
-func InitConnDB(appConfig *config.Config) (*sql.DB, error) {
+type StStorage struct {
+	DB *sql.DB
+}
+
+func NewStorage() *StStorage {
+	return &StStorage{}
+}
+
+func InitConnDB(appConfig *config.Config) (*StStorage, error) {
 	var err error
 
-	DBconn, err = sql.Open("pgx", appConfig.DB.DBConn)
+	Storage.DB, err = sql.Open("pgx", appConfig.DB.DBConn)
 	if err != nil {
 		return nil, fmt.Errorf("InitConnDB: %w", err)
 	}
 
-	return DBconn, nil
+	return Storage, nil
 }
 
-func SaveUser(login string, passHash []byte) (uid int64, err error) {
+func (s *StStorage) SaveUser(login string, passHash []byte) (uid int64, err error) {
+	var id int64
+	const op = "storage.SaveUser"
 
+	insertUser := `INSERT INTO users (login, pass_hash) VALUES ($1, $2) RETURNING id`
+
+	stmt, err := s.DB.Prepare(insertUser)
+	if err != nil {
+		return -1, fmt.Errorf("%s: %w", op, err)
+	}
+
+	err = stmt.QueryRow(login, passHash).Scan(&id)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+			return -1, fmt.Errorf("%s: %w", op, errors.New("login already exists"))
+		} else {
+			return -1, fmt.Errorf("%s: %w", op, err)
+		}
+	}
+
+	return id, nil
 }

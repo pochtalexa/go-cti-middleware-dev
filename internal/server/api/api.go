@@ -80,6 +80,7 @@ func RunAPI(urlStr string) error {
 	//mux.Use(middleware.Logger)
 	//mux.Use(httplog.RequestLogger(logger))
 
+	mux.Post("/api/v1/register", handlers.RegisterUserHandler)
 	mux.Post("/api/v1/control", handlers.ControlHandler)
 	mux.Get("/api/v1/events/{login}", handlers.EventsHandler)
 

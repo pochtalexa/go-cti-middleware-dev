@@ -8,8 +8,6 @@ import (
 
 var AgentsInfo = NewAgentsInfo()
 
-// TODO на перспективу использовать Redis
-
 // StAgentEvents возможные события относительно оператора
 type StAgentEvents struct {
 	UserState              StUserState

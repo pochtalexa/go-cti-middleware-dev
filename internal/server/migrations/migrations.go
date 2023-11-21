@@ -20,7 +20,7 @@ func ApplyMigrations() error {
 		return err
 	}
 
-	if err := goose.Up(storage.DBconn, "."); err != nil {
+	if err := goose.Up(storage.Storage.DB, "."); err != nil {
 		return fmt.Errorf("goose: %w", err)
 	}
 
