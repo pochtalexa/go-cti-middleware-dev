@@ -118,6 +118,7 @@ func EventsHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// RegisterUserHandler регистрация новго агента CTI
 func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.RegisterUserHandler"
 
@@ -144,6 +145,7 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	resBody.Id = id
 
 	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
 	if err := enc.Encode(resBody); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Error().Err(err).Msg(op)
@@ -152,4 +154,9 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug().Str("id", strconv.FormatInt(id, 10)).Msg(op)
 	return
+}
+
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	const op = "handlers.LoginHandler"
+
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"github.com/rs/zerolog/log"
 	"os"
+	"time"
 )
 
 type Config struct {
@@ -12,6 +13,8 @@ type Config struct {
 	CtiAPI   CtiAPI
 	HttpAPI  HttpAPI
 	DB       DB
+	Secret   string
+	TokenTTL time.Duration
 }
 
 type Settings struct {
@@ -41,8 +44,14 @@ type DB struct {
 	DBConn   string
 }
 
+var ServerConfig *Config
+
 func NewConfig() *Config {
 	return &Config{}
+}
+
+func Init() {
+	ServerConfig = NewConfig()
 }
 
 func (c *Config) ReadConfigFile() error {
@@ -59,6 +68,10 @@ func (c *Config) ReadConfigFile() error {
 
 	c.DB.DBConn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		c.DB.Host, c.DB.Port, c.DB.User, c.DB.Password, c.DB.DBname)
+
+	c.Secret = "some long key"
+
+	c.TokenTTL = 5 * time.Minute
 
 	log.Debug().Msg("config file parsed - ok")
 

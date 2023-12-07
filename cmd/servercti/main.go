@@ -20,17 +20,17 @@ func main() {
 	// TODO обработка ответа CTI на отправленные команды
 	// TODO на перспективу использовать Redis
 
-	appConfig := config.NewConfig()
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
-	if err := appConfig.ReadConfigFile(); err != nil {
+	config.Init()
+	if err := config.ServerConfig.ReadConfigFile(); err != nil {
 		log.Fatal().Err(err).Msg("ReadConfigFile")
 	}
-	if appConfig.Settings.LogLevel != "info" {
+	if config.ServerConfig.Settings.LogLevel != "info" {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	st, err := storage.InitConnDB(appConfig)
+	st, err := storage.InitConnDB()
 	if err != nil {
 		log.Fatal().Err(err).Msg("ApplyMigrations")
 	}
@@ -41,7 +41,7 @@ func main() {
 		log.Fatal().Err(err).Msg("ApplyMigrations")
 	}
 
-	wsConn, err := cti.Init(appConfig)
+	wsConn, err := cti.Init()
 	if err != nil {
 		log.Fatal().Err(err).Msg("cti.Init")
 	}
@@ -57,7 +57,7 @@ func main() {
 		log.Fatal().Err(err).Msg("AttachUser")
 	}
 
-	uHTTP := appConfig.HttpAPI.Host + ":" + appConfig.HttpAPI.Port
+	uHTTP := config.ServerConfig.HttpAPI.Host + ":" + config.ServerConfig.HttpAPI.Port
 	if err := api.RunAPI(uHTTP); err != nil {
 		log.Fatal().Err(err).Msg("RunAPI")
 	}

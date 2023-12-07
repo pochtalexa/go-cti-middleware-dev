@@ -14,13 +14,13 @@ import (
 
 var Conn *websocket.Conn
 
-func Init(appConfig *config.Config) (*websocket.Conn, error) {
+func Init() (*websocket.Conn, error) {
 	var err error
 
 	uCTI := url.URL{
-		Scheme: appConfig.CtiAPI.Scheme,
-		Host:   appConfig.CtiAPI.Host + ":" + appConfig.CtiAPI.Port,
-		Path:   appConfig.CtiAPI.Path,
+		Scheme: config.ServerConfig.CtiAPI.Scheme,
+		Host:   config.ServerConfig.CtiAPI.Host + ":" + config.ServerConfig.CtiAPI.Port,
+		Path:   config.ServerConfig.CtiAPI.Path,
 	}
 	log.Info().Str("ws connecting to", uCTI.String()).Msg("")
 

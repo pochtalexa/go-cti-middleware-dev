@@ -7,9 +7,13 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/models"
 )
 
-var Storage = NewStorage()
+var (
+	Storage         = NewStorage()
+	ErrUserNotFound = errors.New("user not found")
+)
 
 type StStorage struct {
 	DB *sql.DB
@@ -19,10 +23,10 @@ func NewStorage() *StStorage {
 	return &StStorage{}
 }
 
-func InitConnDB(appConfig *config.Config) (*StStorage, error) {
+func InitConnDB() (*StStorage, error) {
 	var err error
 
-	Storage.DB, err = sql.Open("pgx", appConfig.DB.DBConn)
+	Storage.DB, err = sql.Open("pgx", config.ServerConfig.DB.DBConn)
 	if err != nil {
 		return nil, fmt.Errorf("InitConnDB: %w", err)
 	}
@@ -30,13 +34,13 @@ func InitConnDB(appConfig *config.Config) (*StStorage, error) {
 	return Storage, nil
 }
 
-func (s *StStorage) SaveUser(login string, passHash []byte) (uid int64, err error) {
+func (s *StStorage) SaveAgent(login string, passHash []byte) (uid int64, err error) {
 	var id int64
-	const op = "storage.SaveUser"
+	const op = "storage.SaveAgent"
 
-	insertUser := `INSERT INTO users (login, pass_hash) VALUES ($1, $2) RETURNING id`
+	insertAgent := `INSERT INTO users (login, pass_hash) VALUES ($1, $2) RETURNING id`
 
-	stmt, err := s.DB.Prepare(insertUser)
+	stmt, err := s.DB.Prepare(insertAgent)
 	if err != nil {
 		return -1, fmt.Errorf("%s: %w", op, err)
 	}
@@ -46,10 +50,34 @@ func (s *StStorage) SaveUser(login string, passHash []byte) (uid int64, err erro
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 			return -1, fmt.Errorf("%s: %w", op, errors.New("login already exists"))
-		} else {
-			return -1, fmt.Errorf("%s: %w", op, err)
 		}
+		return -1, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return id, nil
+}
+
+func (s *StStorage) GetAgent(login string) (*models.StAgent, error) {
+	const op = "storage.GetAgent"
+
+	agent := models.NewAgent()
+	agent.Login = login
+
+	getAgent := `SELECT id, pass_hash FROM users WHERE login = $1`
+
+	stmt, err := s.DB.Prepare(getAgent)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	err = stmt.QueryRow(login).Scan(agent.ID, agent.PassHash)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.NoDataFound {
+			return nil, fmt.Errorf("%s: %w", op, ErrUserNotFound)
+		}
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return agent, nil
 }
