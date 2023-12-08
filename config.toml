@@ -1,7 +1,7 @@
 [Settings]
 # LogLevel = "debug"
 LogLevel = "info"
-UseAuth = false
+UseAuth = true
 
 [CtiAPI]
 Scheme = "ws"

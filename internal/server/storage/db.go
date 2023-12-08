@@ -7,7 +7,6 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/models"
 )
 
 var (
@@ -57,10 +56,10 @@ func (s *StStorage) SaveAgent(login string, passHash []byte) (uid int64, err err
 	return id, nil
 }
 
-func (s *StStorage) GetAgent(login string) (*models.StAgent, error) {
+func (s *StStorage) GetAgent(login string) (*StAgent, error) {
 	const op = "storage.GetAgent"
 
-	agent := models.NewAgent()
+	agent := NewAgent()
 	agent.Login = login
 
 	getAgent := `SELECT id, pass_hash FROM users WHERE login = $1`
@@ -70,7 +69,7 @@ func (s *StStorage) GetAgent(login string) (*models.StAgent, error) {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	err = stmt.QueryRow(login).Scan(agent.ID, agent.PassHash)
+	err = stmt.QueryRow(login).Scan(&agent.ID, &agent.PassHash)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.NoDataFound {

@@ -122,7 +122,7 @@ func EventsHandler(w http.ResponseWriter, r *http.Request) {
 func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.RegisterUserHandler"
 
-	reqBody := storage.NewRegister()
+	reqBody := storage.NewCredentials()
 
 	dec := json.NewDecoder(r.Body)
 	if err := dec.Decode(&reqBody); err != nil {
@@ -159,4 +159,37 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.LoginHandler"
 
+	reqBody := storage.NewCredentials()
+
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&reqBody); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Error().Err(err).Msg(op)
+		return
+	}
+
+	token, err := auth.Login(reqBody.Login, reqBody.Password)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Error().Err(err).Msg(op)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	resBody := storage.NewLoginSuccess()
+	resBody.Token = token
+
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(resBody); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Error().Err(err).Msg(op)
+		return
+	}
+
+	log.Debug().Str("login", reqBody.Login).Msg(fmt.Sprintf("login success: %s", op))
+
+	return
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/models"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
@@ -17,7 +16,7 @@ var (
 )
 
 // NewToken генерируем JWT токен для агента
-func NewToken(agent *models.StAgent, duration time.Duration) (string, error) {
+func NewToken(agent *storage.StAgent, duration time.Duration) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	// Добавляем в токен необходимую информацию
