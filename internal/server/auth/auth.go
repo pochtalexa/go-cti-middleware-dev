@@ -17,13 +17,14 @@ var (
 
 // NewToken генерируем JWT токен для агента
 func NewToken(agent *storage.StAgent, duration time.Duration) (string, error) {
-	token := jwt.New(jwt.SigningMethodHS256)
+	expirationTime := time.Now().Add(duration)
+	claims := storage.NewClaims()
 
-	// Добавляем в токен необходимую информацию
-	claims := token.Claims.(jwt.MapClaims)
-	claims["uid"] = agent.ID
-	claims["login"] = agent.Login
-	claims["exp"] = time.Now().Add(duration).Unix()
+	claims.ID = agent.ID
+	claims.Login = agent.Login
+	claims.RegisteredClaims.ExpiresAt = jwt.NewNumericDate(expirationTime)
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	// Подписываем токен, используя секретный ключ
 	tokenString, err := token.SignedString([]byte(config.ServerConfig.Secret))

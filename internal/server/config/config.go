@@ -20,6 +20,7 @@ type Config struct {
 type Settings struct {
 	LogLevel string
 	UseAuth  bool
+	TokenTTL int64
 }
 
 type CtiAPI struct {
@@ -69,9 +70,9 @@ func (c *Config) ReadConfigFile() error {
 	c.DB.DBConn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		c.DB.Host, c.DB.Port, c.DB.User, c.DB.Password, c.DB.DBname)
 
-	c.Secret = "some long key"
+	c.Secret = "your-256-bit-secret"
 
-	c.TokenTTL = 5 * time.Minute
+	c.TokenTTL = time.Duration(c.Settings.TokenTTL) * time.Minute
 
 	log.Debug().Msg("config file parsed - ok")
 

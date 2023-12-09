@@ -2,6 +2,8 @@
 # LogLevel = "debug"
 LogLevel = "info"
 UseAuth = true
+# TokenTTL min
+TokenTTL = 1
 
 [CtiAPI]
 Scheme = "ws"

@@ -3,6 +3,7 @@ package api
 import (
 	"compress/flate"
 	"compress/gzip"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5"
@@ -14,7 +15,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"net/http"
 	"strings"
-	"time"
 )
 
 // проверяем, что клиент отправил серверу сжатые данные в формате gzip
@@ -72,37 +72,47 @@ func checkCredentials(next http.Handler) http.Handler {
 		}
 
 		tokenString := tokenSlice[1]
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			_, ok := token.Method.(*jwt.SigningMethodRSA)
+		claims := storage.NewClaims()
+
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+			_, ok := token.Method.(*jwt.SigningMethodHMAC)
 			if !ok {
 				w.Header().Set("Content-Type", "application/json")
 				http.Error(w, errors.New("unauthorized").Error(), http.StatusUnauthorized)
 				return "", errors.New("unauthorized")
 			}
 
-			return config.ServerConfig.Secret, nil
+			return []byte(config.ServerConfig.Secret), nil
 		})
 		if err != nil {
+			if errors.Is(err, jwt.ErrTokenExpired) {
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Header().Set("Content-Type", "application/json")
+
+				var expiredBody = make(map[string]string)
+				expiredBody["name"] = "token"
+				expiredBody["data"] = "expired"
+
+				enc := json.NewEncoder(w)
+				enc.SetIndent("", "  ")
+				if err := enc.Encode(expiredBody); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					log.Error().Err(err).Msg(op)
+					return
+				}
+
+				log.Debug().Err(err).Msg(op)
+
+				return
+
+			}
 			w.Header().Set("Content-Type", "application/json")
 			http.Error(w, fmt.Errorf("%s: %w", op, err).Error(), http.StatusUnauthorized)
 			return
 		}
-
-		var agent storage.StAgent
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if ok && token.Valid {
-			agent.ID = claims["uid"].(int64)
-			agent.Login = claims["login"].(string)
-			agent.TokenTTL = claims["exp"].(int64)
-		} else {
+		if !token.Valid {
 			w.Header().Set("Content-Type", "application/json")
-			http.Error(w, fmt.Errorf("%s: invalid token", op).Error(), http.StatusUnauthorized)
-			return
-		}
-
-		if time.Now().Unix() <= agent.TokenTTL {
-			w.Header().Set("Content-Type", "application/json")
-			http.Error(w, fmt.Errorf("%s: expired", op).Error(), http.StatusUnauthorized)
+			http.Error(w, fmt.Errorf("%s: token is invalid", op).Error(), http.StatusUnauthorized)
 			return
 		}
 
@@ -155,6 +165,8 @@ func RunAPI(urlStr string) error {
 		r.Use(checkCredentials)
 		r.Get("/", handlers.EventsHandler)
 	})
+
+	// TODO: добавить Token Refresh
 
 	log.Info().Str("Running on", urlStr).Msg("httpconf server started")
 
