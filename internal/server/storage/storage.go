@@ -231,8 +231,8 @@ type StParseError struct {
 
 // StAgentsInfo мапа с ключом - логин оператора
 type StAgentsInfo struct {
-	Events        map[string]StAgentEvents
-	Updated       map[string]bool
+	Events        map[string]StAgentEvents // евенты - по операторам
+	Updated       map[string]bool          // были ли обновления - по операторам
 	ValidStatuses []string
 }
 
@@ -293,20 +293,6 @@ func NewAgentsInfo() *StAgentsInfo {
 		ValidStatuses: []string{"normal", "dnd", "away"},
 	}
 }
-
-//func (w *StWsEvent) Parse() {
-//	if _, ok := w.Body["name"]; ok {
-//		w.Name = fmt.Sprintf("%v", w.Body["name"])
-//	} else {
-//		w.Name = ""
-//	}
-//
-//	if _, ok := w.Body["login"]; ok {
-//		w.Login = fmt.Sprintf("%v", w.Body["login"])
-//	} else {
-//		w.Login = ""
-//	}
-//}
 
 func (a *StAgentsInfo) SetEvent(event *StWsEvent, message []byte) error {
 	// сохраняем текущие события по оператору и обновляем

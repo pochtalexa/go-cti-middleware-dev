@@ -8,11 +8,26 @@ import (
 	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/ws"
 	"github.com/rs/zerolog/log"
+	"math/rand"
 	"net/url"
 	"slices"
+	"strconv"
+	"time"
 )
 
 var Conn *websocket.Conn
+
+func getRandRid() string {
+	rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	// generate a random 8-digit ID
+	id := ""
+	for i := 0; i < 8; i++ {
+		id += strconv.Itoa(rand.Intn(10))
+	}
+
+	return id
+}
 
 func Init() (*websocket.Conn, error) {
 	var err error
@@ -36,6 +51,7 @@ func Init() (*websocket.Conn, error) {
 func InitCTISess(c *websocket.Conn) error {
 
 	messInitConn := storage.NewWsCommand()
+	messInitConn.Rid = getRandRid()
 	messInitConn.Name = "SetProtocolVersion"
 	messInitConn.ProtocolVersion = "13"
 
@@ -55,6 +71,7 @@ func InitCTISess(c *websocket.Conn) error {
 func AttachUser(c *websocket.Conn, login string) error {
 
 	messAttachUser := storage.NewWsCommand()
+	messAttachUser.Rid = getRandRid()
 	messAttachUser.Name = "AttachToUser"
 	messAttachUser.Login = login
 
@@ -78,6 +95,8 @@ func ChageStatus(c *websocket.Conn, login string, status string) error {
 
 	messChageStatus := storage.NewWsCommand()
 	messChageStatus.Name = "ChangeUserState"
+
+	messChageStatus.Rid = getRandRid()
 	messChageStatus.Login = login
 	messChageStatus.State = status
 
@@ -98,6 +117,7 @@ func ChageStatus(c *websocket.Conn, login string, status string) error {
 func Answer(c *websocket.Conn, login string, cid int) error {
 
 	messAnswer := storage.NewWsCommand()
+	messAnswer.Rid = getRandRid()
 	messAnswer.Name = "Answer"
 	messAnswer.Login = login
 	messAnswer.Cid = cid
@@ -119,6 +139,7 @@ func Answer(c *websocket.Conn, login string, cid int) error {
 func Hangup(c *websocket.Conn, login string, cid int) error {
 
 	messHangup := storage.NewWsCommand()
+	messHangup.Rid = getRandRid()
 	messHangup.Name = "Hangup"
 	messHangup.Login = login
 	messHangup.Cid = cid
@@ -140,6 +161,7 @@ func Hangup(c *websocket.Conn, login string, cid int) error {
 func Mute(c *websocket.Conn, login string, cid int, on bool) error {
 
 	messMute := storage.NewWsCommandMute()
+	messMute.Rid = getRandRid()
 	messMute.Name = "Mute"
 	messMute.Login = login
 	messMute.Cid = cid

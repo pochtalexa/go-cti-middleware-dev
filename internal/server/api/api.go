@@ -59,64 +59,64 @@ func checkCredentials(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.checkCredentials"
 
-		if !config.ServerConfig.Settings.UseAuth {
-			next.ServeHTTP(w, r)
-		}
+		useAuth := config.ServerConfig.Settings.UseAuth
+		if useAuth {
 
-		tokenField := r.Header.Get("Authorization")
-		tokenSlice := strings.Split(tokenField, " ")
-		if tokenField == "" || tokenSlice[0] != "Bearer" || len(tokenSlice) != 2 {
-			w.Header().Set("Content-Type", "application/json")
-			http.Error(w, errors.New("no token provided").Error(), http.StatusBadRequest)
-			return
-		}
-
-		tokenString := tokenSlice[1]
-		claims := storage.NewClaims()
-
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			_, ok := token.Method.(*jwt.SigningMethodHMAC)
-			if !ok {
+			tokenField := r.Header.Get("Authorization")
+			tokenSlice := strings.Split(tokenField, " ")
+			if tokenField == "" || tokenSlice[0] != "Bearer" || len(tokenSlice) != 2 {
 				w.Header().Set("Content-Type", "application/json")
-				http.Error(w, errors.New("unauthorized").Error(), http.StatusUnauthorized)
-				return "", errors.New("unauthorized")
+				http.Error(w, errors.New("no token provided").Error(), http.StatusBadRequest)
+				return
 			}
 
-			return []byte(config.ServerConfig.Secret), nil
-		})
-		if err != nil {
-			if errors.Is(err, jwt.ErrTokenExpired) {
-				w.WriteHeader(http.StatusUnauthorized)
-				w.Header().Set("Content-Type", "application/json")
+			tokenString := tokenSlice[1]
+			claims := storage.NewClaims()
 
-				var expiredBody = make(map[string]string)
-				expiredBody["name"] = "token"
-				expiredBody["data"] = "expired"
-
-				enc := json.NewEncoder(w)
-				enc.SetIndent("", "  ")
-				if err := enc.Encode(expiredBody); err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					log.Error().Err(err).Msg(op)
-					return
+			token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+				_, ok := token.Method.(*jwt.SigningMethodHMAC)
+				if !ok {
+					w.Header().Set("Content-Type", "application/json")
+					http.Error(w, errors.New("unauthorized").Error(), http.StatusUnauthorized)
+					return "", errors.New("unauthorized")
 				}
 
-				log.Debug().Err(err).Msg(op)
+				return []byte(config.ServerConfig.Secret), nil
+			})
+			if err != nil {
+				if errors.Is(err, jwt.ErrTokenExpired) {
+					w.WriteHeader(http.StatusUnauthorized)
+					w.Header().Set("Content-Type", "application/json")
 
+					var expiredBody = make(map[string]string)
+					expiredBody["name"] = "token"
+					expiredBody["data"] = "expired"
+
+					enc := json.NewEncoder(w)
+					enc.SetIndent("", "  ")
+					if err := enc.Encode(expiredBody); err != nil {
+						http.Error(w, err.Error(), http.StatusInternalServerError)
+						log.Error().Err(err).Msg(op)
+						return
+					}
+
+					log.Debug().Err(err).Msg(op)
+
+					return
+
+				}
+				w.Header().Set("Content-Type", "application/json")
+				http.Error(w, fmt.Errorf("%s: %w", op, err).Error(), http.StatusUnauthorized)
 				return
-
 			}
-			w.Header().Set("Content-Type", "application/json")
-			http.Error(w, fmt.Errorf("%s: %w", op, err).Error(), http.StatusUnauthorized)
-			return
-		}
-		if !token.Valid {
-			w.Header().Set("Content-Type", "application/json")
-			http.Error(w, fmt.Errorf("%s: token is invalid", op).Error(), http.StatusUnauthorized)
-			return
+			if !token.Valid {
+				w.Header().Set("Content-Type", "application/json")
+				http.Error(w, fmt.Errorf("%s: token is invalid", op).Error(), http.StatusUnauthorized)
+				return
+			}
 		}
 
-		log.Debug().Msg(fmt.Sprintf("%s - ok", op))
+		log.Debug().Bool("useAuth", useAuth).Msg(fmt.Sprintf("%s - ok", op))
 
 		next.ServeHTTP(w, r)
 	})
@@ -166,7 +166,7 @@ func RunAPI(urlStr string) error {
 		r.Get("/", handlers.EventsHandler)
 	})
 
-	// TODO: добавить Token Refresh
+	mux.Get("/api/v1/refresh", handlers.RefreshHandler)
 
 	log.Info().Str("Running on", urlStr).Msg("httpconf server started")
 

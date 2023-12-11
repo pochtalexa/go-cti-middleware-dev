@@ -2,9 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gdamore/tcell/v2"
+	"github.com/pochtalexa/go-cti-middleware/internal/agent/auth"
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/flags"
-	"github.com/pochtalexa/go-cti-middleware/internal/agent/httpconf"
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/logger"
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/pgui"
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/storage"
@@ -13,25 +14,31 @@ import (
 	"time"
 )
 
+// TODO: добавить логику авторизации
 func main() {
 	fileLogger := logger.InitFileLogger()
 	defer fileLogger.Close()
 
-	httpconf.Init()
 	flags.ParseFlags()
+	storage.InitApiRoutes()
+
+	if err := auth.Login(); err != nil {
+		log.Fatal().Err(err).Msg("Login")
+	}
 
 	go pgui.Init()
 
-	url := flags.ServAddr + "/api/v1/events/agent"
-	req, _ := http.NewRequest(http.MethodGet, url, nil)
-
 	// по таймеру запрашиваем новые метрики
 	for range time.Tick(time.Second * 1) {
+		const op = "main loop"
+
 		tempAgentEvents := storage.NewAgentEvents()
 
-		res, err := httpconf.HTTPClient.Do(req)
+		req, _ := http.NewRequest(http.MethodGet, storage.AppConfig.ApiRoutes.Events, nil)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
+		res, err := storage.AppConfig.HTTPClient.Do(req)
 		if err != nil {
-			log.Error().Err(err).Msg("httpClient.Do")
+			log.Error().Str("op", op).Err(err).Msg("httpClient.Do")
 			pgui.FooterSetText("Connection error", tcell.ColorRed)
 			continue
 		}
@@ -45,7 +52,7 @@ func main() {
 
 		dec := json.NewDecoder(res.Body)
 		if err := dec.Decode(&tempAgentEvents); err != nil {
-			log.Fatal().Err(err).Msg("Decode")
+			log.Fatal().Str("op", op).Err(err).Msg("Decode")
 		}
 
 		// обновляем только те events которые получили от API

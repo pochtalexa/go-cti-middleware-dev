@@ -381,3 +381,8 @@ func (a *StAgentEvents) UpdateEvents(newEvents *StAgentEvents) {
 		a.ParseError = newEvents.ParseError
 	}
 }
+
+type StLoginBody struct {
+	Login    string
+	Password string
+}

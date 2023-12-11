@@ -15,6 +15,11 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
+type IntStorage interface {
+	SaveAgent(login string, passHash []byte) (uid int64, err error)
+	GetAgent(login string) (*storage.StAgent, error)
+}
+
 // NewToken генерируем JWT токен для агента
 func NewToken(agent *storage.StAgent, duration time.Duration) (string, error) {
 	expirationTime := time.Now().Add(duration)
@@ -35,7 +40,7 @@ func NewToken(agent *storage.StAgent, duration time.Duration) (string, error) {
 	return tokenString, nil
 }
 
-func RegisterNewUser(login string, pass string) (int64, error) {
+func RegisterNewUser(login string, pass string, curStorage IntStorage) (int64, error) {
 	// op (operation) - имя текущей функции и пакета. Такую метку удобно
 	// добавлять в логи и в текст ошибок, чтобы легче было искать хвосты
 	const op = "auth.RegisterNewUser"
@@ -52,7 +57,7 @@ func RegisterNewUser(login string, pass string) (int64, error) {
 	}
 
 	// Сохраняем пользователя в БД
-	id, err := storage.Storage.SaveAgent(login, passHash)
+	id, err := curStorage.SaveAgent(login, passHash)
 	if err != nil {
 		return -1, fmt.Errorf("%s: %w", op, err)
 	}
@@ -63,13 +68,13 @@ func RegisterNewUser(login string, pass string) (int64, error) {
 // Login checks if user with given credentials exists in the system and returns access token.
 // If user exists, but password is incorrect, returns error.
 // If user doesn't exist, returns error.
-func Login(login string, password string) (string, error) {
+func Login(login string, password string, curStorage IntStorage) (string, error) {
 	const op = "auth.Login"
 
 	log := log.With().Str("op", op).Str("login", login).Logger()
 	log.Debug().Msg("attempting to login user")
 
-	agent, err := storage.Storage.GetAgent(login)
+	agent, err := curStorage.GetAgent(login)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			log.Error().Err(err).Msg("empty select")

@@ -19,12 +19,12 @@ func NewRegisterSuccess() *StRegisterSuccess {
 	return &StRegisterSuccess{}
 }
 
-type StLoginSuccess struct {
+type StTokenBody struct {
 	Token string `json:"token"`
 }
 
-func NewLoginSuccess() *StLoginSuccess {
-	return &StLoginSuccess{}
+func NewTokenBody() *StTokenBody {
+	return &StTokenBody{}
 }
 
 type StAgent struct {

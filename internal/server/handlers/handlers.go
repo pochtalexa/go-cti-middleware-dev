@@ -2,24 +2,31 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/auth"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/cti"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 	"github.com/rs/zerolog/log"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 )
 
 // ControlHandler принимем команду по http API и вызваем соотвествующий медот CTI API
 func ControlHandler(w http.ResponseWriter, r *http.Request) {
+	const op = "handler.ControlHandler"
+
 	reqBody := storage.NewWsCommand()
 
 	dec := json.NewDecoder(r.Body)
 	if err := dec.Decode(&reqBody); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Error().Err(err).Msg("Decode")
+		log.Error().Str("op", op).Err(err).Msg("Decode")
 		return
 	}
 
@@ -58,13 +65,11 @@ func ControlHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	log.Info().Str("reqBody", fmt.Sprint(reqBody)).Msg("reqBody")
+	log.Info().Str("reqBody", fmt.Sprint(reqBody)).Msg(op)
 }
 
 // EventsHandler запрос на получение текущих events
 func EventsHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO добавить авторизацию
-
 	// проверяем что логин в запросе не пустой
 	login := chi.URLParam(r, "login")
 	if login == "" {
@@ -98,6 +103,7 @@ func EventsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
@@ -112,7 +118,6 @@ func EventsHandler(w http.ResponseWriter, r *http.Request) {
 	// очищаем хранилище после отправки
 	storage.AgentsInfo.DropAgentEvents(login)
 
-	w.WriteHeader(http.StatusOK)
 	log.Info().Msg("GetEventsHandler - ok")
 
 	return
@@ -131,7 +136,7 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := auth.RegisterNewUser(reqBody.Login, reqBody.Password)
+	id, err := auth.RegisterNewUser(reqBody.Login, reqBody.Password, storage.Storage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Error().Err(err).Msg(op)
@@ -168,7 +173,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.Login(reqBody.Login, reqBody.Password)
+	token, err := auth.Login(reqBody.Login, reqBody.Password, storage.Storage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Error().Err(err).Msg(op)
@@ -178,7 +183,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	resBody := storage.NewLoginSuccess()
+	resBody := storage.NewTokenBody()
 	resBody.Token = token
 
 	enc := json.NewEncoder(w)
@@ -191,5 +196,80 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug().Str("login", reqBody.Login).Msg(fmt.Sprintf("login success: %s", op))
 
+	return
+}
+
+func RefreshHandler(w http.ResponseWriter, r *http.Request) {
+	const op = "handlers.RefreshHandler"
+
+	if !config.ServerConfig.Settings.UseAuth {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, "no refresh needed", http.StatusBadRequest)
+		return
+	}
+
+	tokenField := r.Header.Get("Authorization")
+	tokenSlice := strings.Split(tokenField, " ")
+	if tokenField == "" || tokenSlice[0] != "Bearer" || len(tokenSlice) != 2 {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, errors.New("no token provided").Error(), http.StatusBadRequest)
+		return
+	}
+
+	tokenString := tokenSlice[1]
+	claims := storage.NewClaims()
+
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		_, ok := token.Method.(*jwt.SigningMethodHMAC)
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			http.Error(w, errors.New("unauthorized").Error(), http.StatusUnauthorized)
+			return "", errors.New("unauthorized")
+		}
+
+		return []byte(config.ServerConfig.Secret), nil
+	})
+	if err != nil && !errors.Is(err, jwt.ErrTokenExpired) {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, fmt.Errorf("%s: %w", op, err).Error(), http.StatusUnauthorized)
+		return
+	}
+	if !token.Valid {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, fmt.Errorf("%s: token is invalid", op).Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// не обновляем ранее одной минуты до окончания
+	if time.Until(claims.ExpiresAt.Time) > 30*time.Second {
+		http.Error(w, fmt.Errorf("%s: not expired", op).Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Now, create a new token for the current use, with a renewed expiration time
+	expirationTime := time.Now().Add(config.ServerConfig.TokenTTL)
+	claims.RegisteredClaims.ExpiresAt = jwt.NewNumericDate(expirationTime)
+	token = jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err = token.SignedString([]byte(config.ServerConfig.Secret))
+	if err != nil {
+		http.Error(w, fmt.Errorf("%s: refresh error", op).Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	resBody := storage.NewTokenBody()
+	resBody.Token = tokenString
+
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(resBody); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Error().Err(err).Msg(op)
+		return
+	}
+
+	log.Debug().Str("id", strconv.FormatInt(claims.ID, 10)).Msg(op)
 	return
 }

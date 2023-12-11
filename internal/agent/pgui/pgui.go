@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/flags"
-	"github.com/pochtalexa/go-cti-middleware/internal/agent/httpconf"
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/storage"
 	"github.com/rivo/tview"
 	"github.com/rs/zerolog/log"
@@ -69,8 +68,9 @@ func mute(checked bool) {
 	}
 
 	// TODO добавить уведомление об ошибке отправки команды в CTI API
-	req, _ := http.NewRequest(http.MethodPost, flags.UrlControl, &buf)
-	res, err := httpconf.HTTPClient.Do(req)
+	req, _ := http.NewRequest(http.MethodPost, storage.AppConfig.ApiRoutes.Control, &buf)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
+	res, err := storage.AppConfig.HTTPClient.Do(req)
 	if err != nil {
 		//log.Error().Err(err).Msg("status httpClient.Do")
 		return
@@ -94,8 +94,9 @@ func answer() {
 	}
 
 	// TODO добавить уведомление об ошибке отправки команды в CTI API
-	req, _ := http.NewRequest(http.MethodPost, flags.UrlControl, &buf)
-	res, err := httpconf.HTTPClient.Do(req)
+	req, _ := http.NewRequest(http.MethodPost, storage.AppConfig.ApiRoutes.Control, &buf)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
+	res, err := storage.AppConfig.HTTPClient.Do(req)
 	if err != nil {
 		//log.Error().Err(err).Msg("status httpClient.Do")
 		return
@@ -119,8 +120,9 @@ func hangup() {
 	}
 
 	// TODO добавить уведомление об ошибке отправки команды в CTI API
-	req, _ := http.NewRequest(http.MethodPost, flags.UrlControl, &buf)
-	res, err := httpconf.HTTPClient.Do(req)
+	req, _ := http.NewRequest(http.MethodPost, storage.AppConfig.ApiRoutes.Control, &buf)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
+	res, err := storage.AppConfig.HTTPClient.Do(req)
 	if err != nil {
 		//log.Error().Err(err).Msg("status httpClient.Do")
 		return
@@ -130,6 +132,8 @@ func hangup() {
 }
 
 func status(status string, index int) {
+	const op = "pgui.status"
+
 	buf := bytes.Buffer{}
 
 	body := storage.NewWsCommand()
@@ -144,10 +148,11 @@ func status(status string, index int) {
 	}
 
 	// TODO добавить уведомление об ошибке отправки команды в CTI API
-	req, _ := http.NewRequest(http.MethodPost, flags.UrlControl, &buf)
-	res, err := httpconf.HTTPClient.Do(req)
+	req, _ := http.NewRequest(http.MethodPost, storage.AppConfig.ApiRoutes.Control, &buf)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
+	res, err := storage.AppConfig.HTTPClient.Do(req)
 	if err != nil {
-		log.Error().Err(err).Msg("status httpClient.Do")
+		log.Error().Str("op", op).Err(err).Msg(".Do")
 		return
 	}
 	defer res.Body.Close()
