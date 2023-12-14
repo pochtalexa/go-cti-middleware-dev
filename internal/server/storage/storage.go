@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/rs/zerolog/log"
+	"sync"
 )
 
-var AgentsInfo = NewAgentsInfo()
+var (
+	AgentsInfo = NewAgentsInfo()
+)
 
 // StAgentEvents возможные события относительно оператора
 type StAgentEvents struct {
@@ -233,6 +236,7 @@ type StParseError struct {
 type StAgentsInfo struct {
 	Events        map[string]StAgentEvents // евенты - по операторам
 	Updated       map[string]bool          // были ли обновления - по операторам
+	Mutex         map[string]*sync.RWMutex // мьютекс чтения/записи событий по агенту
 	ValidStatuses []string
 }
 
@@ -290,13 +294,31 @@ func NewAgentsInfo() *StAgentsInfo {
 	return &StAgentsInfo{
 		Events:        make(map[string]StAgentEvents),
 		Updated:       make(map[string]bool),
+		Mutex:         make(map[string]*sync.RWMutex),
 		ValidStatuses: []string{"normal", "dnd", "away"},
 	}
 }
 
 func (a *StAgentsInfo) SetEvent(event *StWsEvent, message []byte) error {
+	var eventLogin string
+
+	if event.Login == "" {
+		eventLogin = "noName"
+	} else {
+		eventLogin = event.Login
+	}
+
+	mutex, ok := a.Mutex[eventLogin]
+	if !ok {
+		var m sync.RWMutex
+		a.Mutex[eventLogin] = &m
+		mutex = a.Mutex[eventLogin]
+	}
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	// сохраняем текущие события по оператору и обновляем
-	curEvents := a.Events[event.Login]
+	curEvents := a.Events[eventLogin]
 
 	switch event.Name {
 	case "UserState":
@@ -375,13 +397,8 @@ func (a *StAgentsInfo) SetEvent(event *StWsEvent, message []byte) error {
 		return fmt.Errorf("can not find case for key %v", event.Name)
 	}
 
-	if event.Login == "" {
-		a.Events["noName"] = curEvents
-		a.Updated["noName"] = true
-	} else {
-		a.Events[event.Login] = curEvents
-		a.Updated[event.Login] = true
-	}
+	a.Events[eventLogin] = curEvents
+	a.Updated[eventLogin] = true
 
 	return nil
 }

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"time"
 )
 
 var (
@@ -274,7 +275,8 @@ func (a *StAgentEvents) ToString(name string) (string, error) {
 	case "NewCall":
 		if a.NewCall.Name != "" {
 			event := a.NewCall
-			result = fmt.Sprintf("state: %v, direction: %v, displayName: %v",
+			result = fmt.Sprintf("CreationTime: %v, state: %v, direction: %v, displayName: %v",
+				time.Unix(int64(event.CreationTime), 0),
 				event.State,
 				event.Direction,
 				event.DisplayName,
@@ -287,15 +289,15 @@ func (a *StAgentEvents) ToString(name string) (string, error) {
 			event := a.CallStatus
 			result = fmt.Sprintf(
 				"state: %v, "+
-					"params: %v, "+
 					"creationTime: %v, "+
 					"answerTime: %v, "+
-					"hangupTime: %v, ",
+					"hangupTime: %v, "+
+					"params: %v, ",
 				event.State,
+				time.Unix(int64(event.CreationTime), 0),
+				time.Unix(int64(event.AnswerTime), 0),
+				time.Unix(int64(event.HangupTime), 0),
 				event.Params,
-				event.CreationTime,
-				event.AnswerTime,
-				event.HangupTime,
 			)
 		} else {
 			result = "-"

@@ -10,7 +10,10 @@ import (
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/storage"
 	"github.com/rivo/tview"
 	"github.com/rs/zerolog/log"
+	"math/rand"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 var (
@@ -30,6 +33,7 @@ func mute(checked bool) {
 
 	body := storage.NewWsCommand()
 	body.Name = "Mute"
+	body.Rid = getRandRid()
 	body.Login = flags.Login
 	body.Cid = storage.AgentEvents.NewCall.Cid
 	body.On = checked
@@ -64,6 +68,7 @@ func answer() {
 	buf := bytes.Buffer{}
 
 	body := storage.NewWsCommand()
+	body.Rid = getRandRid()
 	body.Name = "Answer"
 	body.Login = flags.Login
 	body.Cid = storage.AgentEvents.NewCall.Cid
@@ -96,6 +101,39 @@ func hangup() {
 
 	body := storage.NewWsCommand()
 	body.Name = "Hangup"
+	body.Rid = getRandRid()
+	body.Login = flags.Login
+	body.Cid = storage.AgentEvents.NewCall.Cid
+
+	enc := json.NewEncoder(&buf)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(body); err != nil {
+		log.Error().Str("op", op).Err(err).Msg("Encode")
+		return
+	}
+
+	// TODO добавить уведомление об ошибке отправки команды в CTI API
+	req, _ := http.NewRequest(http.MethodPost, storage.AppConfig.ApiRoutes.Control, &buf)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
+	res, err := storage.AppConfig.HTTPClient.Do(req)
+	if err != nil {
+		log.Error().Str("op", op).Err(err).Msg("Do")
+		FooterSetText("Connection error", tcell.ColorRed)
+		return
+	}
+	defer res.Body.Close()
+
+	checkStatusCode(res.StatusCode, op)
+}
+
+func closeWrapUp() {
+	const op = "pgui.closeWrapUp"
+
+	buf := bytes.Buffer{}
+
+	body := storage.NewWsCommand()
+	body.Name = "Close"
+	body.Rid = getRandRid()
 	body.Login = flags.Login
 	body.Cid = storage.AgentEvents.NewCall.Cid
 
@@ -131,6 +169,7 @@ func status(status string, index int) {
 
 	body := storage.NewWsCommand()
 	body.Name = "ChangeUserState"
+	body.Rid = getRandRid()
 	body.Login = flags.Login
 	body.State = status
 
@@ -155,6 +194,18 @@ func status(status string, index int) {
 	checkStatusCode(res.StatusCode, op)
 
 	log.Debug().Str("op", op).Str("status", status).Msg("status changed")
+}
+
+func getRandRid() string {
+	rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	// generate a random 8-digit ID
+	id := ""
+	for i := 0; i < 8; i++ {
+		id += strconv.Itoa(rand.Intn(10))
+	}
+
+	return id
 }
 
 func FooterSetText(text string, color tcell.Color) {
@@ -236,8 +287,9 @@ func newForm(title string, login string) *tview.Form {
 	form.AddTextView("login", login, 10, 1, true, false)
 	form.AddDropDown("Status", []string{"init", "normal", "away", "dnd"}, 0, status)
 	form.AddCheckbox("Mute", false, mute)
-	form.AddButton("Answer", answer)
-	form.AddButton("Hangup", hangup)
+	form.AddButton("Answ", answer)
+	form.AddButton("Hang", hangup)
+	form.AddButton("Wrap", closeWrapUp)
 	form.MouseHandler()
 
 	return form

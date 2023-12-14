@@ -15,8 +15,6 @@ import (
 	"time"
 )
 
-var Conn *websocket.Conn
-
 func getRandRid() string {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 
@@ -89,36 +87,36 @@ func AttachUser(login string) error {
 	return nil
 }
 
-func ChageStatus(login string, status string) error {
+func ChangeStatus(rid string, login string, status string) error {
 	if !slices.Contains(storage.AgentsInfo.ValidStatuses, status) {
-		return fmt.Errorf("ChageStatus: bad status val: %s", status)
+		return fmt.Errorf("ChangeStatus: bad status val: %s", status)
 	}
 
 	messChageStatus := storage.NewWsCommand()
 	messChageStatus.Name = "ChangeUserState"
 
-	messChageStatus.Rid = getRandRid()
+	messChageStatus.Rid = rid
 	messChageStatus.Login = login
 	messChageStatus.State = status
 
 	body, err := json.Marshal(messChageStatus)
 	if err != nil {
-		return fmt.Errorf("ChageStatus - marshal: %w", err)
+		return fmt.Errorf("ChangeStatus - marshal: %w", err)
 	}
 
 	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
-		return fmt.Errorf("ChageStatus: %w", err)
+		return fmt.Errorf("ChangeStatus: %w", err)
 	}
 
-	log.Info().Str("login", login).Msg("ChageStatus - ok")
+	log.Info().Str("login", login).Msg("ChangeStatus - ok")
 
 	return nil
 }
 
-func Answer(login string, cid int) error {
+func Answer(rid string, login string, cid int) error {
 
 	messAnswer := storage.NewWsCommand()
-	messAnswer.Rid = getRandRid()
+	messAnswer.Rid = rid
 	messAnswer.Name = "Answer"
 	messAnswer.Login = login
 	messAnswer.Cid = cid
@@ -137,10 +135,10 @@ func Answer(login string, cid int) error {
 	return nil
 }
 
-func Hangup(login string, cid int) error {
+func Hangup(rid string, login string, cid int) error {
 
 	messHangup := storage.NewWsCommand()
-	messHangup.Rid = getRandRid()
+	messHangup.Rid = rid
 	messHangup.Name = "Hangup"
 	messHangup.Login = login
 	messHangup.Cid = cid
@@ -159,10 +157,32 @@ func Hangup(login string, cid int) error {
 	return nil
 }
 
-func Mute(login string, cid int, on bool) error {
+func Close(rid string, login string, cid int) error {
+
+	mess := storage.NewWsCommand()
+	mess.Rid = rid
+	mess.Name = "Close"
+	mess.Login = login
+	mess.Cid = cid
+
+	body, err := json.Marshal(mess)
+	if err != nil {
+		return fmt.Errorf("close - marshal: %w", err)
+	}
+
+	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
+		return fmt.Errorf("close: %w", err)
+	}
+
+	log.Info().Str("login", login).Msg("Close - ok")
+
+	return nil
+}
+
+func Mute(rid string, login string, cid int, on bool) error {
 
 	messMute := storage.NewWsCommandMute()
-	messMute.Rid = getRandRid()
+	messMute.Rid = rid
 	messMute.Name = "Mute"
 	messMute.Login = login
 	messMute.Cid = cid

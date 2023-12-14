@@ -39,26 +39,32 @@ func ControlHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch reqBody.Name {
 	case "ChangeUserState":
-		if err := cti.ChageStatus(reqBody.Login, reqBody.State); err != nil {
-			log.Error().Err(err).Msg("call ChageStatus")
+		if err := cti.ChangeStatus(reqBody.Rid, reqBody.Login, reqBody.State); err != nil {
+			log.Error().Err(err).Msg("call ChangeStatus")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "Answer":
-		if err := cti.Answer(reqBody.Login, reqBody.Cid); err != nil {
-			log.Error().Err(err).Msg("call ChageStatus")
+		if err := cti.Answer(reqBody.Rid, reqBody.Login, reqBody.Cid); err != nil {
+			log.Error().Err(err).Msg("call Answer")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "Hangup":
-		if err := cti.Hangup(reqBody.Login, reqBody.Cid); err != nil {
-			log.Error().Err(err).Msg("call ChageStatus")
+		if err := cti.Hangup(reqBody.Rid, reqBody.Login, reqBody.Cid); err != nil {
+			log.Error().Err(err).Msg("call Hangup")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	case "Close":
+		if err := cti.Close(reqBody.Rid, reqBody.Login, reqBody.Cid); err != nil {
+			log.Error().Err(err).Msg("call Close")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "Mute":
-		if err := cti.Mute(reqBody.Login, reqBody.Cid, reqBody.On); err != nil {
-			log.Error().Err(err).Msg("call ChageStatus")
+		if err := cti.Mute(reqBody.Rid, reqBody.Login, reqBody.Cid, reqBody.On); err != nil {
+			log.Error().Err(err).Msg("call Mute")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -90,17 +96,26 @@ func EventsHandler(w http.ResponseWriter, r *http.Request) {
 	if !updated {
 		errorText := fmt.Errorf("no updated data for agent with login: %s", login)
 		http.Error(w, errorText.Error(), http.StatusNoContent)
-		log.Debug().Err(errorText).Msg("StatusNoContent")
+		log.Debug().Str("updated", errorText.Error()).Msg("StatusNoContent")
 		return
 	}
 
+	mutex, ok := storage.AgentsInfo.Mutex[login]
+	if !ok {
+		errorText := fmt.Errorf("no mutex key for agent with login: %s", login)
+		http.Error(w, errorText.Error(), http.StatusNotFound)
+		log.Error().Err(errorText).Msg("EventsHandler")
+		return
+	}
+	mutex.RLock()
 	resBody, ok := storage.AgentsInfo.Events[login]
 	if !ok {
-		errorText := fmt.Errorf("no key for agent with login: %s", login)
+		errorText := fmt.Errorf("no events key for agent with login: %s", login)
 		http.Error(w, errorText.Error(), http.StatusNotFound)
 		log.Error().Err(errorText).Msg("resBody")
 		return
 	}
+	mutex.RUnlock()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
