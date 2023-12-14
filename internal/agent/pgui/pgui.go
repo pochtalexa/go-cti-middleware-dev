@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gdamore/tcell/v2"
+	"github.com/pochtalexa/go-cti-middleware/internal/agent/auth"
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/flags"
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/storage"
 	"github.com/rivo/tview"
@@ -22,33 +23,9 @@ var (
 	app        *tview.Application
 )
 
-func newTextView(title string) *tview.TextView {
-	textView := tview.NewTextView()
-
-	textView.SetTextAlign(tview.AlignLeft)
-	textView.SetScrollable(true)
-	textView.SetTitle(title).SetBorder(true)
-	textView.SetChangedFunc(func() {
-		app.Draw()
-	})
-	return textView
-}
-
-func newForm(title string, login string) *tview.Form {
-	form := tview.NewForm()
-
-	form.SetTitle(title).SetBorder(true)
-	form.AddTextView("login", login, 10, 1, true, false)
-	form.AddDropDown("Status", []string{"normal", "away", "dnd"}, 0, status)
-	form.AddCheckbox("Mute", false, mute)
-	form.AddButton("Answer", answer)
-	form.AddButton("Hangup", hangup)
-	form.MouseHandler()
-
-	return form
-}
-
 func mute(checked bool) {
+	const op = "pgui.mute"
+
 	buf := bytes.Buffer{}
 
 	body := storage.NewWsCommand()
@@ -63,7 +40,7 @@ func mute(checked bool) {
 	enc := json.NewEncoder(&buf)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(body); err != nil {
-		log.Error().Err(err).Msg("Encode")
+		log.Error().Str("op", op).Err(err).Msg("Encode")
 		return
 	}
 
@@ -72,13 +49,18 @@ func mute(checked bool) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
 	res, err := storage.AppConfig.HTTPClient.Do(req)
 	if err != nil {
-		//log.Error().Err(err).Msg("status httpClient.Do")
+		log.Error().Str("op", op).Err(err).Msg("Do")
+		FooterSetText("Connection error", tcell.ColorRed)
 		return
 	}
 	defer res.Body.Close()
+
+	checkStatusCode(res.StatusCode, op)
 }
 
 func answer() {
+	const op = "pgui.answer"
+
 	buf := bytes.Buffer{}
 
 	body := storage.NewWsCommand()
@@ -89,7 +71,7 @@ func answer() {
 	enc := json.NewEncoder(&buf)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(body); err != nil {
-		log.Error().Err(err).Msg("Encode")
+		log.Error().Str("op", op).Err(err).Msg("Encode")
 		return
 	}
 
@@ -98,13 +80,18 @@ func answer() {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
 	res, err := storage.AppConfig.HTTPClient.Do(req)
 	if err != nil {
-		//log.Error().Err(err).Msg("status httpClient.Do")
+		log.Error().Str("op", op).Err(err).Msg("Do")
+		FooterSetText("Connection error", tcell.ColorRed)
 		return
 	}
 	defer res.Body.Close()
+
+	checkStatusCode(res.StatusCode, op)
 }
 
 func hangup() {
+	const op = "pgui.hangup"
+
 	buf := bytes.Buffer{}
 
 	body := storage.NewWsCommand()
@@ -115,7 +102,7 @@ func hangup() {
 	enc := json.NewEncoder(&buf)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(body); err != nil {
-		log.Error().Err(err).Msg("Encode")
+		log.Error().Str("op", op).Err(err).Msg("Encode")
 		return
 	}
 
@@ -124,26 +111,33 @@ func hangup() {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
 	res, err := storage.AppConfig.HTTPClient.Do(req)
 	if err != nil {
-		//log.Error().Err(err).Msg("status httpClient.Do")
+		log.Error().Str("op", op).Err(err).Msg("Do")
+		FooterSetText("Connection error", tcell.ColorRed)
 		return
 	}
 	defer res.Body.Close()
 
+	checkStatusCode(res.StatusCode, op)
 }
 
 func status(status string, index int) {
-	const op = "pgui.status"
+	const op = "pgui.statusWork"
+
+	if status == "init" {
+		return
+	}
 
 	buf := bytes.Buffer{}
 
 	body := storage.NewWsCommand()
 	body.Name = "ChangeUserState"
+	body.Login = flags.Login
 	body.State = status
 
 	enc := json.NewEncoder(&buf)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(body); err != nil {
-		log.Error().Err(err).Msg("Encode")
+		log.Error().Str("op", op).Err(err).Msg("Encode")
 		return
 	}
 
@@ -152,10 +146,15 @@ func status(status string, index int) {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
 	res, err := storage.AppConfig.HTTPClient.Do(req)
 	if err != nil {
-		log.Error().Str("op", op).Err(err).Msg(".Do")
+		log.Error().Str("op", op).Err(err).Msg("Do")
+		FooterSetText("Connection error", tcell.ColorRed)
 		return
 	}
 	defer res.Body.Close()
+
+	checkStatusCode(res.StatusCode, op)
+
+	log.Debug().Str("op", op).Str("status", status).Msg("status changed")
 }
 
 func FooterSetText(text string, color tcell.Color) {
@@ -163,6 +162,24 @@ func FooterSetText(text string, color tcell.Color) {
 		Footer.SetText(text).SetTextColor(color)
 	},
 	)
+}
+
+func checkStatusCode(statusCode int, op string) {
+	if statusCode != http.StatusOK {
+		if statusCode == http.StatusUnauthorized {
+			if err := auth.Refresh(); err != nil {
+				log.Error().Str("op", op).Err(err).Msg("Refresh")
+				FooterSetText("Connection error", tcell.ColorRed)
+				return
+			} else {
+				log.Debug().Str("op", op).Msg("Refresh done")
+				return
+			}
+		}
+		log.Error().Str("op", op).Int("StatusCode", statusCode).Msg("")
+		FooterSetText("Connection error", tcell.ColorRed)
+		return
+	}
 }
 
 func Init() {
@@ -198,5 +215,30 @@ func Init() {
 	if err := app.SetRoot(grid, true).SetFocus(grid).EnableMouse(true).Run(); err != nil {
 		log.Fatal().Err(err).Msg("run PguiApp")
 	}
+}
 
+func newTextView(title string) *tview.TextView {
+	textView := tview.NewTextView()
+
+	textView.SetTextAlign(tview.AlignLeft)
+	textView.SetScrollable(true)
+	textView.SetTitle(title).SetBorder(true)
+	textView.SetChangedFunc(func() {
+		app.Draw()
+	})
+	return textView
+}
+
+func newForm(title string, login string) *tview.Form {
+	form := tview.NewForm()
+
+	form.SetTitle(title).SetBorder(true)
+	form.AddTextView("login", login, 10, 1, true, false)
+	form.AddDropDown("Status", []string{"init", "normal", "away", "dnd"}, 0, status)
+	form.AddCheckbox("Mute", false, mute)
+	form.AddButton("Answer", answer)
+	form.AddButton("Hangup", hangup)
+	form.MouseHandler()
+
+	return form
 }

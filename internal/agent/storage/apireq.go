@@ -17,7 +17,7 @@ func NewApiRoutes() *StApiRoutes {
 	urlRegister := fmt.Sprintf("%s/api/v1/register", flags.ServAddr)
 	urlLogin := fmt.Sprintf("%s/api/v1/login", flags.ServAddr)
 	urlRefresh := fmt.Sprintf("%s/api/v1/refresh", flags.ServAddr)
-	urlEvents := fmt.Sprintf("%s/api/v1/events/%s", flags.ServAddr, flags.AgentName)
+	urlEvents := fmt.Sprintf("%s/api/v1/events/%s", flags.ServAddr, flags.Login)
 	urlControl := fmt.Sprintf("%s/api/v1/control", flags.ServAddr)
 
 	return &StApiRoutes{
@@ -31,6 +31,4 @@ func NewApiRoutes() *StApiRoutes {
 
 func InitApiRoutes() {
 	AppConfig.ApiRoutes = NewApiRoutes()
-	AppConfig.Credentials.Login = flags.Login
-	AppConfig.Credentials.Password = flags.Password
 }

@@ -10,5 +10,4 @@ type StConfig struct {
 	TokenString string
 	HTTPClient  http.Client
 	ApiRoutes   *StApiRoutes
-	Credentials StLoginBody
 }

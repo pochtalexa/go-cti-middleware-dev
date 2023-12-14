@@ -22,20 +22,28 @@ func main() {
 	flags.ParseFlags()
 	storage.InitApiRoutes()
 
-	if err := auth.Login(); err != nil {
-		log.Fatal().Err(err).Msg("Login")
-	}
-
 	go pgui.Init()
 
+	for range time.Tick(time.Millisecond * 1000) {
+		if err := auth.Login(); err != nil {
+			log.Error().Err(err).Msg("Login")
+			pgui.FooterSetText("login error", tcell.ColorRed)
+			continue
+		}
+		break
+	}
+
 	// по таймеру запрашиваем новые метрики
-	for range time.Tick(time.Second * 1) {
+	for range time.Tick(time.Millisecond * 1000) {
 		const op = "main loop"
 
 		tempAgentEvents := storage.NewAgentEvents()
 
 		req, _ := http.NewRequest(http.MethodGet, storage.AppConfig.ApiRoutes.Events, nil)
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
+
+		log.Debug().Str("storage.AppConfig.TokenString", storage.AppConfig.TokenString).Msg("Events")
+
 		res, err := storage.AppConfig.HTTPClient.Do(req)
 		if err != nil {
 			log.Error().Str("op", op).Err(err).Msg("httpClient.Do")
@@ -43,12 +51,22 @@ func main() {
 			continue
 		}
 		defer res.Body.Close()
-		pgui.FooterSetText("Connected", tcell.ColorGreen)
 
-		// нет новых данных
-		if res.StatusCode == http.StatusNoContent {
-			continue
+		if res.StatusCode != http.StatusOK {
+			// нет новых данных
+			if res.StatusCode == http.StatusNoContent {
+				continue
+			}
+			if res.StatusCode == http.StatusUnauthorized {
+				if err := auth.Refresh(); err != nil {
+					log.Error().Str("op", op).Err(err).Msg("Refresh")
+					pgui.FooterSetText("Connection error", tcell.ColorRed)
+					continue
+				}
+			}
 		}
+
+		pgui.FooterSetText("Connected", tcell.ColorGreen)
 
 		dec := json.NewDecoder(res.Body)
 		if err := dec.Decode(&tempAgentEvents); err != nil {
@@ -66,10 +84,6 @@ func main() {
 
 		result, _ = storage.AgentEvents.ToString("CallStatus")
 		pgui.CallStatus.SetText(result)
-
-		//log.Info().Str("resp", fmt.Sprintln(resp)).Msg("")
-		//log.Info().Str("resp[state]", fmt.Sprintln(resp["state"])).Msg("")
-
 	}
 
 }

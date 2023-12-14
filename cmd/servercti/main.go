@@ -40,20 +40,16 @@ func main() {
 		log.Fatal().Err(err).Msg("ApplyMigrations")
 	}
 
-	wsConn, err := cti.Init()
+	err = cti.Init()
 	if err != nil {
 		log.Fatal().Err(err).Msg("cti.Init")
 	}
-	defer wsConn.Close()
+	defer config.ServerConfig.WsConn.Close()
 
-	go ws.ReadMessage(wsConn, storage.AgentsInfo)
+	go ws.ReadMessage(storage.AgentsInfo)
 
-	if err := cti.InitCTISess(wsConn); err != nil {
+	if err := cti.InitCTISess(); err != nil {
 		log.Fatal().Err(err).Msg("InitCTISess")
-	}
-
-	if err := cti.AttachUser(wsConn, "agent"); err != nil {
-		log.Fatal().Err(err).Msg("AttachUser")
 	}
 
 	uHTTP := config.ServerConfig.HttpAPI.Host + ":" + config.ServerConfig.HttpAPI.Port

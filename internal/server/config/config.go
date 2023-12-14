@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/gorilla/websocket"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/rs/zerolog/log"
 	"os"
@@ -15,6 +16,7 @@ type Config struct {
 	DB       DB
 	Secret   string
 	TokenTTL time.Duration
+	WsConn   *websocket.Conn
 }
 
 type Settings struct {

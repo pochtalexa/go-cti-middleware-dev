@@ -386,3 +386,7 @@ type StLoginBody struct {
 	Login    string
 	Password string
 }
+
+type StTokenString struct {
+	Token string `json:"token"`
+}

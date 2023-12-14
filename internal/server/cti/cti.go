@@ -29,7 +29,7 @@ func getRandRid() string {
 	return id
 }
 
-func Init() (*websocket.Conn, error) {
+func Init() error {
 	var err error
 
 	uCTI := url.URL{
@@ -39,16 +39,16 @@ func Init() (*websocket.Conn, error) {
 	}
 	log.Info().Str("ws connecting to", uCTI.String()).Msg("")
 
-	Conn, _, err = websocket.DefaultDialer.Dial(uCTI.String(), nil)
+	config.ServerConfig.WsConn, _, err = websocket.DefaultDialer.Dial(uCTI.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("websocket dial: %w", err)
+		return fmt.Errorf("websocket dial: %w", err)
 	}
 	log.Info().Str("ws connected", uCTI.String()).Msg("")
 
-	return Conn, nil
+	return nil
 }
 
-func InitCTISess(c *websocket.Conn) error {
+func InitCTISess() error {
 
 	messInitConn := storage.NewWsCommand()
 	messInitConn.Rid = getRandRid()
@@ -60,15 +60,16 @@ func InitCTISess(c *websocket.Conn) error {
 		return fmt.Errorf("messInitConn - marshal: %w", err)
 	}
 
-	if err := ws.SendCommand(c, body); err != nil {
+	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
 		return fmt.Errorf("initCTISess: %w", err)
 	}
 
 	log.Info().Msg("InitCTISess - ok")
+
 	return nil
 }
 
-func AttachUser(c *websocket.Conn, login string) error {
+func AttachUser(login string) error {
 
 	messAttachUser := storage.NewWsCommand()
 	messAttachUser.Rid = getRandRid()
@@ -80,7 +81,7 @@ func AttachUser(c *websocket.Conn, login string) error {
 		return fmt.Errorf("messAttachUser - marshal: %w", err)
 	}
 
-	if err := ws.SendCommand(c, body); err != nil {
+	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
 		return fmt.Errorf("AttachUser: %w", err)
 	}
 
@@ -88,7 +89,7 @@ func AttachUser(c *websocket.Conn, login string) error {
 	return nil
 }
 
-func ChageStatus(c *websocket.Conn, login string, status string) error {
+func ChageStatus(login string, status string) error {
 	if !slices.Contains(storage.AgentsInfo.ValidStatuses, status) {
 		return fmt.Errorf("ChageStatus: bad status val: %s", status)
 	}
@@ -105,7 +106,7 @@ func ChageStatus(c *websocket.Conn, login string, status string) error {
 		return fmt.Errorf("ChageStatus - marshal: %w", err)
 	}
 
-	if err := ws.SendCommand(c, body); err != nil {
+	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
 		return fmt.Errorf("ChageStatus: %w", err)
 	}
 
@@ -114,7 +115,7 @@ func ChageStatus(c *websocket.Conn, login string, status string) error {
 	return nil
 }
 
-func Answer(c *websocket.Conn, login string, cid int) error {
+func Answer(login string, cid int) error {
 
 	messAnswer := storage.NewWsCommand()
 	messAnswer.Rid = getRandRid()
@@ -127,7 +128,7 @@ func Answer(c *websocket.Conn, login string, cid int) error {
 		return fmt.Errorf("answer - marshal: %w", err)
 	}
 
-	if err := ws.SendCommand(c, body); err != nil {
+	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
 		return fmt.Errorf("Answer: %w", err)
 	}
 
@@ -136,7 +137,7 @@ func Answer(c *websocket.Conn, login string, cid int) error {
 	return nil
 }
 
-func Hangup(c *websocket.Conn, login string, cid int) error {
+func Hangup(login string, cid int) error {
 
 	messHangup := storage.NewWsCommand()
 	messHangup.Rid = getRandRid()
@@ -149,7 +150,7 @@ func Hangup(c *websocket.Conn, login string, cid int) error {
 		return fmt.Errorf("hangup - marshal: %w", err)
 	}
 
-	if err := ws.SendCommand(c, body); err != nil {
+	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
 		return fmt.Errorf("Hangup: %w", err)
 	}
 
@@ -158,7 +159,7 @@ func Hangup(c *websocket.Conn, login string, cid int) error {
 	return nil
 }
 
-func Mute(c *websocket.Conn, login string, cid int, on bool) error {
+func Mute(login string, cid int, on bool) error {
 
 	messMute := storage.NewWsCommandMute()
 	messMute.Rid = getRandRid()
@@ -174,7 +175,7 @@ func Mute(c *websocket.Conn, login string, cid int, on bool) error {
 
 	log.Info().Str("messMute", messMute.String()).Msg("Mute")
 
-	if err := ws.SendCommand(c, body); err != nil {
+	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
 		return fmt.Errorf("Mute: %w", err)
 	}
 

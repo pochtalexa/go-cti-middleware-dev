@@ -7,7 +7,6 @@ import (
 
 var (
 	ServAddr  string
-	AgentName string
 	Login     string
 	Password  string
 )
@@ -25,12 +24,10 @@ func isFlagPassed(name string) bool {
 func ParseFlags() {
 
 	defaultServAddr := "http://localhost:9595"
-	defaultAgentName := "agent"
-	defaultLogin := "test1"
-	defaultPassword := "test123"
+	defaultLogin := "agent"
+	defaultPassword := "123"
 
 	flag.StringVar(&ServAddr, "a", defaultServAddr, "middleware api addr")
-	flag.StringVar(&AgentName, "n", defaultAgentName, "agent name")
 	flag.StringVar(&Login, "l", defaultLogin, "login")
 	flag.StringVar(&Password, "p", defaultPassword, "password")
 	flag.Parse()

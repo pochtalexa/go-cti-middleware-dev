@@ -39,25 +39,25 @@ func ControlHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch reqBody.Name {
 	case "ChangeUserState":
-		if err := cti.ChageStatus(cti.Conn, "agent", reqBody.State); err != nil {
+		if err := cti.ChageStatus(reqBody.Login, reqBody.State); err != nil {
 			log.Error().Err(err).Msg("call ChageStatus")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "Answer":
-		if err := cti.Answer(cti.Conn, "agent", reqBody.Cid); err != nil {
+		if err := cti.Answer(reqBody.Login, reqBody.Cid); err != nil {
 			log.Error().Err(err).Msg("call ChageStatus")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "Hangup":
-		if err := cti.Hangup(cti.Conn, "agent", reqBody.Cid); err != nil {
+		if err := cti.Hangup(reqBody.Login, reqBody.Cid); err != nil {
 			log.Error().Err(err).Msg("call ChageStatus")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "Mute":
-		if err := cti.Mute(cti.Conn, "agent", reqBody.Cid, reqBody.On); err != nil {
+		if err := cti.Mute(reqBody.Login, reqBody.Cid, reqBody.On); err != nil {
 			log.Error().Err(err).Msg("call ChageStatus")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -84,7 +84,7 @@ func EventsHandler(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		errorText := fmt.Errorf("no key for agent with login: %s", login)
 		http.Error(w, errorText.Error(), http.StatusNotFound)
-		log.Error().Err(errorText).Msg("")
+		log.Error().Err(errorText).Msg("EventsHandler")
 		return
 	}
 	if !updated {
@@ -98,7 +98,7 @@ func EventsHandler(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		errorText := fmt.Errorf("no key for agent with login: %s", login)
 		http.Error(w, errorText.Error(), http.StatusNotFound)
-		log.Error().Err(errorText).Msg("")
+		log.Error().Err(errorText).Msg("resBody")
 		return
 	}
 
@@ -180,6 +180,10 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := cti.AttachUser(reqBody.Login); err != nil {
+		log.Fatal().Str("op", op).Err(err).Msg("ws AttachUser")
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -234,13 +238,10 @@ func RefreshHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Errorf("%s: %w", op, err).Error(), http.StatusUnauthorized)
 		return
 	}
-	if !token.Valid {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, fmt.Errorf("%s: token is invalid", op).Error(), http.StatusUnauthorized)
-		return
-	}
 
-	// не обновляем ранее одной минуты до окончания
+	//if !token.Valid - не проверям т.к. если просрочен - становится не валидным
+
+	// не обновляем ранее указанного времени
 	if time.Until(claims.ExpiresAt.Time) > 30*time.Second {
 		http.Error(w, fmt.Errorf("%s: not expired", op).Error(), http.StatusBadRequest)
 		return

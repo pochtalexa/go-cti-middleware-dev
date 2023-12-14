@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 	"github.com/rs/zerolog/log"
 	"slices"
@@ -30,12 +31,12 @@ func SendCommand(c *websocket.Conn, body []byte) error {
 // TODO ошибки отдавать в канал
 
 // ReadMessage WS goroutine
-func ReadMessage(c *websocket.Conn, agentsInfo IntAgent) {
+func ReadMessage(agentsInfo IntAgent) {
 	const op = "ws.ReadMessage"
 
 	for {
 		wsEvent := storage.NewWsEvent()
-		_, message, err := c.ReadMessage()
+		_, message, err := config.ServerConfig.WsConn.ReadMessage()
 		if err != nil {
 			log.Error().Str("op", op).Err(err).Msg("ReadMessage")
 		}
