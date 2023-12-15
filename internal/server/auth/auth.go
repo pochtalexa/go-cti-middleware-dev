@@ -15,6 +15,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=IntStorage
 type IntStorage interface {
 	SaveAgent(login string, passHash []byte) (uid int64, err error)
 	GetAgent(login string) (*storage.StAgent, error)
@@ -40,7 +41,7 @@ func NewToken(agent *storage.StAgent, duration time.Duration) (string, error) {
 	return tokenString, nil
 }
 
-func RegisterNewUser(login string, pass string, curStorage IntStorage) (int64, error) {
+func RegisterNewUser(login string, password string, curStorage IntStorage) (int64, error) {
 	// op (operation) - имя текущей функции и пакета. Такую метку удобно
 	// добавлять в логи и в текст ошибок, чтобы легче было искать хвосты
 	const op = "auth.RegisterNewUser"
@@ -50,8 +51,12 @@ func RegisterNewUser(login string, pass string, curStorage IntStorage) (int64, e
 
 	log.Debug().Msg("registering user")
 
+	if login == "" || password == "" {
+		return -1, fmt.Errorf("%s: bad credentials", op)
+	}
+
 	// Генерируем хэш и соль для пароля
-	passHash, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
+	passHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return -1, fmt.Errorf("%s: %w", op, err)
 	}

@@ -6,9 +6,10 @@ import (
 )
 
 var (
-	ServAddr  string
-	Login     string
-	Password  string
+	ServAddr string
+	Login    string
+	Password string
+	Register bool
 )
 
 func isFlagPassed(name string) bool {
@@ -30,6 +31,7 @@ func ParseFlags() {
 	flag.StringVar(&ServAddr, "a", defaultServAddr, "middleware api addr")
 	flag.StringVar(&Login, "l", defaultLogin, "login")
 	flag.StringVar(&Password, "p", defaultPassword, "password")
+	flag.BoolVar(&Register, "r", false, "use registration")
 	flag.Parse()
 
 	log.Info().Msg("ParseFlags - ok")

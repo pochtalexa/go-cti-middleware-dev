@@ -14,7 +14,6 @@ import (
 
 func main() {
 	// TODO тесты
-	// TODO sync.Mutex
 	// TODO Обработка ошибок
 	// TODO обработка ответа CTI на отправленные команды
 	// TODO на перспективу использовать Redis
