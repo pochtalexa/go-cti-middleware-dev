@@ -168,7 +168,7 @@ func RunAPI(urlStr string) error {
 
 	mux.Get("/api/v1/refresh", handlers.RefreshHandler)
 
-	log.Info().Str("Running on", urlStr).Msg("httpconf server started")
+	log.Info().Str("Running on", urlStr).Msg("http server started")
 
 	return http.ListenAndServe(urlStr, mux)
 }

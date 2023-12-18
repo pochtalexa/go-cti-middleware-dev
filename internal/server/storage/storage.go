@@ -407,6 +407,25 @@ func (a *StAgentsInfo) DropAgentEvents(login string) {
 	a.Events[login] = StAgentEvents{}
 }
 
+func (a *StAgentsInfo) IsUpdated(login string) (value bool, isKey bool) {
+	value, isKey = a.Updated[login]
+	return
+}
+
+func (a *StAgentsInfo) SetUpdated(login string, val bool) {
+	a.Updated[login] = val
+}
+
+func (a *StAgentsInfo) GetMutex(login string) (mutex *sync.RWMutex, isKey bool) {
+	mutex, isKey = a.Mutex[login]
+	return
+}
+
+func (a *StAgentsInfo) GetEvents(login string) (events StAgentEvents, isKey bool) {
+	events, isKey = a.Events[login]
+	return
+}
+
 func (w *StWsCommand) String() string {
 	var tempMap map[string]interface{}
 

@@ -5,6 +5,7 @@ import (
 	"github.com/pochtalexa/go-cti-middleware/internal/server/api"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/cti"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/handlers"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/migrations"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/ws"
@@ -38,6 +39,8 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("ApplyMigrations")
 	}
+
+	handlers.Init()
 
 	err = cti.Init()
 	if err != nil {

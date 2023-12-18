@@ -8,11 +8,17 @@ import (
 	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 	"github.com/rs/zerolog/log"
 	"slices"
+	"sync"
 )
 
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=IntAgent
 type IntAgent interface {
 	SetEvent(event *storage.StWsEvent, message []byte) error
 	DropAgentEvents(login string)
+	IsUpdated(login string) (bool, bool)
+	SetUpdated(login string, val bool)
+	GetMutex(login string) (mutex *sync.RWMutex, isKey bool)
+	GetEvents(login string) (events storage.StAgentEvents, isKey bool)
 }
 
 func SendCommand(c *websocket.Conn, body []byte) error {
@@ -39,15 +45,17 @@ func ReadMessage(agentsInfo IntAgent) {
 		_, message, err := config.ServerConfig.WsConn.ReadMessage()
 		if err != nil {
 			log.Error().Str("op", op).Err(err).Msg("ReadMessage")
+			return
 		}
 
 		if err = json.Unmarshal(message, &wsEvent); err != nil {
 			log.Error().Str("op", op).Err(err).Msg("Unmarshal wsEvent")
+			return
 		}
 
-		// для отображения в итоговом логе
 		if err = json.Unmarshal(message, &wsEvent.Body); err != nil {
 			log.Error().Err(err).Str("op", op).Msg("Unmarshal wsEvent.Body")
+			return
 		}
 
 		if err = agentsInfo.SetEvent(wsEvent, message); err != nil {

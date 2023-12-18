@@ -10,12 +10,19 @@ import (
 	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/cti"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/ws"
 	"github.com/rs/zerolog/log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 )
+
+var AgentsInfo ws.IntAgent
+
+func Init() {
+	AgentsInfo = storage.AgentsInfo
+}
 
 // ControlHandler принимем команду по http API и вызваем соотвествующий медот CTI API
 func ControlHandler(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +93,7 @@ func EventsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// проверяем что есть обновленные данные
-	updated, ok := storage.AgentsInfo.Updated[login]
+	updated, ok := AgentsInfo.IsUpdated(login)
 	if !ok {
 		errorText := fmt.Errorf("no key for agent with login: %s", login)
 		http.Error(w, errorText.Error(), http.StatusNotFound)
@@ -100,7 +107,7 @@ func EventsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mutex, ok := storage.AgentsInfo.Mutex[login]
+	mutex, ok := AgentsInfo.GetMutex(login)
 	if !ok {
 		errorText := fmt.Errorf("no mutex key for agent with login: %s", login)
 		http.Error(w, errorText.Error(), http.StatusNotFound)
@@ -108,7 +115,7 @@ func EventsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mutex.RLock()
-	resBody, ok := storage.AgentsInfo.Events[login]
+	resBody, ok := AgentsInfo.GetEvents(login)
 	if !ok {
 		errorText := fmt.Errorf("no events key for agent with login: %s", login)
 		http.Error(w, errorText.Error(), http.StatusNotFound)
@@ -128,10 +135,10 @@ func EventsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	storage.AgentsInfo.Updated[login] = false
+	AgentsInfo.SetUpdated(login, false)
 
 	// очищаем хранилище после отправки
-	storage.AgentsInfo.DropAgentEvents(login)
+	AgentsInfo.DropAgentEvents(login)
 
 	log.Info().Msg("GetEventsHandler - ok")
 
