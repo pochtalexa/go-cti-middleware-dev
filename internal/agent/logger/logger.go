@@ -15,8 +15,6 @@ func InitFileLogger() *os.File {
 		log.Fatal().Err(err).Msg("initMultiLogger")
 	}
 
-	//writers := io.MultiWriter(os.Stdout, fileLogger)
-	//log.Logger = log.Output(writers)
 	log.Logger = log.Output(fileLogger)
 
 	log.Info().Msg("FileLogger initiated")

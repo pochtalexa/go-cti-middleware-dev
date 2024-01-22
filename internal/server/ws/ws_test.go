@@ -2,16 +2,22 @@ package ws
 
 import (
 	"encoding/json"
-	"github.com/gorilla/websocket"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/ws/mocks"
-	"github.com/rs/zerolog/log"
-	"github.com/stretchr/testify/mock"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+)
+
+import (
+	"github.com/gorilla/websocket"
+	"github.com/rs/zerolog/log"
+	"github.com/stretchr/testify/mock"
+)
+
+import (
+	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/ws/mocks"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -48,7 +54,7 @@ func sendMessage(t *testing.T, ws *websocket.Conn, msg map[string]interface{}) {
 		t.Fatal(err)
 	}
 
-	if err := ws.WriteMessage(websocket.BinaryMessage, m); err != nil {
+	if err = ws.WriteMessage(websocket.BinaryMessage, m); err != nil {
 		t.Fatalf("%v", err)
 	}
 }

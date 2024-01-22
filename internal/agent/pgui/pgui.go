@@ -4,20 +4,28 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/gdamore/tcell/v2"
-	"github.com/pochtalexa/go-cti-middleware/internal/agent/auth"
-	"github.com/pochtalexa/go-cti-middleware/internal/agent/flags"
-	"github.com/pochtalexa/go-cti-middleware/internal/agent/storage"
-	"github.com/rivo/tview"
-	"github.com/rs/zerolog/log"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strconv"
 	"time"
 )
 
+import (
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
+	"github.com/rs/zerolog/log"
+)
+
+import (
+	"github.com/pochtalexa/go-cti-middleware/internal/agent/auth"
+	"github.com/pochtalexa/go-cti-middleware/internal/agent/flags"
+	"github.com/pochtalexa/go-cti-middleware/internal/agent/storage"
+)
+
 var (
 	Action     *tview.Form
+	Call       *tview.Form
 	Header     *tview.TextView
 	Footer     *tview.TextView
 	UserState  *tview.TextView
@@ -45,21 +53,21 @@ func mute(checked bool) {
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(body); err != nil {
 		log.Error().Str("op", op).Err(err).Msg("Encode")
+		storage.AppConfig.DisplayErrCh <- fmt.Sprintf("%s: json error. err: %s", op, err)
 		return
 	}
 
-	// TODO добавить уведомление об ошибке отправки команды в CTI API
-	req, _ := http.NewRequest(http.MethodPost, storage.AppConfig.ApiRoutes.Control, &buf)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
-	res, err := storage.AppConfig.HTTPClient.Do(req)
+	res, err := sendControlCommand(buf, op)
 	if err != nil {
-		log.Error().Str("op", op).Err(err).Msg("Do")
-		FooterSetText("Connection error", tcell.ColorRed)
+		log.Error().Str("op", op).Err(err).Msg("sendControlCommand")
 		return
 	}
-	defer res.Body.Close()
 
-	checkStatusCode(res.StatusCode, op)
+	if err = checkStatusCode(res.StatusCode, op); err != nil {
+		log.Debug().Str("op", op).Err(err).Msg("checkStatusCode")
+	} else {
+		log.Debug().Str("op", op).Msg("ok")
+	}
 }
 
 func answer() {
@@ -77,21 +85,21 @@ func answer() {
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(body); err != nil {
 		log.Error().Str("op", op).Err(err).Msg("Encode")
+		storage.AppConfig.DisplayErrCh <- fmt.Sprintf("%s: json error. err: %s", op, err)
 		return
 	}
 
-	// TODO добавить уведомление об ошибке отправки команды в CTI API
-	req, _ := http.NewRequest(http.MethodPost, storage.AppConfig.ApiRoutes.Control, &buf)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
-	res, err := storage.AppConfig.HTTPClient.Do(req)
+	res, err := sendControlCommand(buf, op)
 	if err != nil {
-		log.Error().Str("op", op).Err(err).Msg("Do")
-		FooterSetText("Connection error", tcell.ColorRed)
+		log.Error().Str("op", op).Err(err).Msg("sendControlCommand")
 		return
 	}
-	defer res.Body.Close()
 
-	checkStatusCode(res.StatusCode, op)
+	if err = checkStatusCode(res.StatusCode, op); err != nil {
+		log.Debug().Str("op", op).Err(err).Msg("checkStatusCode")
+	} else {
+		log.Debug().Str("op", op).Msg("ok")
+	}
 }
 
 func hangup() {
@@ -109,21 +117,21 @@ func hangup() {
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(body); err != nil {
 		log.Error().Str("op", op).Err(err).Msg("Encode")
+		storage.AppConfig.DisplayErrCh <- fmt.Sprintf("%s: json error. err: %s", op, err)
 		return
 	}
 
-	// TODO добавить уведомление об ошибке отправки команды в CTI API
-	req, _ := http.NewRequest(http.MethodPost, storage.AppConfig.ApiRoutes.Control, &buf)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
-	res, err := storage.AppConfig.HTTPClient.Do(req)
+	res, err := sendControlCommand(buf, op)
 	if err != nil {
-		log.Error().Str("op", op).Err(err).Msg("Do")
-		FooterSetText("Connection error", tcell.ColorRed)
+		log.Error().Str("op", op).Err(err).Msg("sendControlCommand")
 		return
 	}
-	defer res.Body.Close()
 
-	checkStatusCode(res.StatusCode, op)
+	if err = checkStatusCode(res.StatusCode, op); err != nil {
+		log.Debug().Str("op", op).Err(err).Msg("checkStatusCode")
+	} else {
+		log.Debug().Str("op", op).Msg("ok")
+	}
 }
 
 func closeWrapUp() {
@@ -141,21 +149,21 @@ func closeWrapUp() {
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(body); err != nil {
 		log.Error().Str("op", op).Err(err).Msg("Encode")
+		storage.AppConfig.DisplayErrCh <- fmt.Sprintf("%s: json error. err: %s", op, err)
 		return
 	}
 
-	// TODO добавить уведомление об ошибке отправки команды в CTI API
-	req, _ := http.NewRequest(http.MethodPost, storage.AppConfig.ApiRoutes.Control, &buf)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
-	res, err := storage.AppConfig.HTTPClient.Do(req)
+	res, err := sendControlCommand(buf, op)
 	if err != nil {
-		log.Error().Str("op", op).Err(err).Msg("Do")
-		FooterSetText("Connection error", tcell.ColorRed)
+		log.Error().Str("op", op).Err(err).Msg("sendControlCommand")
 		return
 	}
-	defer res.Body.Close()
 
-	checkStatusCode(res.StatusCode, op)
+	if err = checkStatusCode(res.StatusCode, op); err != nil {
+		log.Debug().Str("op", op).Err(err).Msg("checkStatusCode")
+	} else {
+		log.Debug().Str("op", op).Msg("ok")
+	}
 }
 
 func status(status string, index int) {
@@ -177,23 +185,65 @@ func status(status string, index int) {
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(body); err != nil {
 		log.Error().Str("op", op).Err(err).Msg("Encode")
+		storage.AppConfig.DisplayErrCh <- fmt.Sprintf("%s: json error. err: %s", op, err)
 		return
 	}
 
-	// TODO добавить уведомление об ошибке отправки команды в CTI API
-	req, _ := http.NewRequest(http.MethodPost, storage.AppConfig.ApiRoutes.Control, &buf)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
-	res, err := storage.AppConfig.HTTPClient.Do(req)
+	res, err := sendControlCommand(buf, op)
 	if err != nil {
-		log.Error().Str("op", op).Err(err).Msg("Do")
-		FooterSetText("Connection error", tcell.ColorRed)
+		log.Error().Str("op", op).Err(err).Msg("sendControlCommand")
 		return
 	}
-	defer res.Body.Close()
 
-	checkStatusCode(res.StatusCode, op)
+	if err = checkStatusCode(res.StatusCode, op); err != nil {
+		log.Debug().Str("op", op).Err(err).Msg("checkStatusCode")
+	} else {
+		log.Debug().Str("op", op).Str("status", status).Msg("status changed")
+	}
 
-	log.Debug().Str("op", op).Str("status", status).Msg("status changed")
+}
+
+func call() {
+	const op = "pgui.call"
+
+	inputField := Call.GetFormItem(0).(*tview.InputField)
+	text := inputField.GetText()
+
+	log.Debug().Str("op", op).Str("text", text).Msg("PhoneNumber")
+
+	if text == "" {
+		return
+	}
+
+	buf := bytes.Buffer{}
+
+	body := storage.NewWsCommand()
+	body.Name = "MakeCall"
+	body.Rid = getRandRid()
+	body.Login = flags.Login
+	body.PhoneNumber = text
+
+	enc := json.NewEncoder(&buf)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(body); err != nil {
+		log.Error().Str("op", op).Err(err).Msg("Encode")
+		storage.AppConfig.DisplayErrCh <- fmt.Sprintf("%s: json error. err: %s", op, err)
+		return
+	}
+
+	res, err := sendControlCommand(buf, op)
+	if err != nil {
+		log.Error().Str("op", op).Err(err).Msg("sendControlCommand")
+		return
+	}
+
+	if err = checkStatusCode(res.StatusCode, op); err != nil {
+		log.Debug().Str("op", op).Err(err).Msg("MakeCall")
+	} else {
+		log.Debug().Str("op", op).Msg("MakeCall - ok")
+	}
+
+	return
 }
 
 func getRandRid() string {
@@ -215,22 +265,39 @@ func FooterSetText(text string, color tcell.Color) {
 	)
 }
 
-func checkStatusCode(statusCode int, op string) {
+func sendControlCommand(buf bytes.Buffer, opCalling string) (*http.Response, error) {
+	const op = "sendControlCommand"
+
+	req, _ := http.NewRequest(http.MethodPost, storage.AppConfig.ApiRoutes.Control, &buf)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.GetToken()))
+	res, err := storage.AppConfig.HTTPClient.Do(req)
+	if err != nil {
+		storage.AppConfig.DisplayErrCh <- fmt.Sprintf("%s-%s: connection error. err: %s", op, opCalling, err)
+		return nil, fmt.Errorf("%s-%s: %w", op, opCalling, err)
+	}
+	defer res.Body.Close()
+
+	return res, nil
+}
+
+func checkStatusCode(statusCode int, op string) error {
 	if statusCode != http.StatusOK {
 		if statusCode == http.StatusUnauthorized {
 			if err := auth.Refresh(); err != nil {
 				log.Error().Str("op", op).Err(err).Msg("Refresh")
-				FooterSetText("Connection error", tcell.ColorRed)
-				return
+				storage.AppConfig.DisplayErrCh <- fmt.Sprintf("%s: connection error. statusCode: %d", op, statusCode)
+				return fmt.Errorf("auth refresh. %s: %w", op, err)
 			} else {
 				log.Debug().Str("op", op).Msg("Refresh done")
-				return
+				return nil
 			}
 		}
-		log.Error().Str("op", op).Int("StatusCode", statusCode).Msg("")
-		FooterSetText("Connection error", tcell.ColorRed)
-		return
+		log.Error().Str("op", op).Int("StatusCode", statusCode).Msg("checkStatusCode")
+		storage.AppConfig.DisplayErrCh <- fmt.Sprintf("%s: connection error. statusCode: %d", op, statusCode)
+		return fmt.Errorf("%s: statusCode: %d", op, statusCode)
 	}
+
+	return nil
 }
 
 func Init() {
@@ -242,7 +309,8 @@ func Init() {
 	UserState = newTextView("UserState")
 	NewCall = newTextView("NewCall")
 	CallStatus = newTextView("CallStatus")
-	Action = newForm("Action", "agent")
+	Action = newActionForm("Action", "agent")
+	Call = newCallForm("Call")
 
 	grid := tview.NewGrid().
 		SetRows(1, 0, 0, 0, 1).
@@ -256,12 +324,11 @@ func Init() {
 	//	AddItem(main, 1, 0, 1, 3, 0, 0, false)
 
 	// Layout for screens wider than 100 cells.
-	grid.AddItem(Action, 1, 0, 3, 1, 1, 1, true).
+	grid.AddItem(Action, 1, 0, 2, 1, 1, 1, true).
+		AddItem(Call, 3, 0, 1, 1, 1, 1, false).
 		AddItem(UserState, 1, 1, 1, 2, 1, 1, false).
 		AddItem(NewCall, 2, 1, 1, 2, 1, 1, false).
 		AddItem(CallStatus, 3, 1, 1, 2, 1, 1, false)
-
-	//go refresh()
 
 	if err := app.SetRoot(grid, true).SetFocus(grid).EnableMouse(true).Run(); err != nil {
 		log.Fatal().Err(err).Msg("run PguiApp")
@@ -280,7 +347,7 @@ func newTextView(title string) *tview.TextView {
 	return textView
 }
 
-func newForm(title string, login string) *tview.Form {
+func newActionForm(title string, login string) *tview.Form {
 	form := tview.NewForm()
 
 	form.SetTitle(title).SetBorder(true)
@@ -293,4 +360,24 @@ func newForm(title string, login string) *tview.Form {
 	form.MouseHandler()
 
 	return form
+}
+
+// TODO: добавить конпку Reconnect
+func newCallForm(title string) *tview.Form {
+	form := tview.NewForm()
+
+	form.SetTitle(title).SetBorder(true)
+	form.AddInputField("Num:", "", 20, newCallFormValidateInput, nil)
+	form.AddButton("Call", call)
+	form.AddButton("Hang", hangup)
+	form.MouseHandler()
+
+	return form
+}
+
+func newCallFormValidateInput(textToCheck string, lastChar rune) bool {
+	if m, _ := regexp.MatchString("^\\d+$", textToCheck); m {
+		return true
+	}
+	return false
 }

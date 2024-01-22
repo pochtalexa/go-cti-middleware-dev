@@ -9,3 +9,5 @@ CREATE TABLE IF NOT EXISTS users
 );
 
 -- +goose Down
+-- удаляем таблицу
+DROP TABLE IF EXISTS users;

@@ -75,6 +75,16 @@ func ControlHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	case "MakeCall":
+		if err := cti.MakeCall(reqBody.Rid, reqBody.Login, reqBody.PhoneNumber); err != nil {
+			log.Error().Err(err).Msg("call MakeCall")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	default:
+		http.Error(w, fmt.Errorf("reqBody.Name: %s", reqBody.Name).Error(), http.StatusBadRequest)
+		log.Error().Str("reqBody", fmt.Sprint(reqBody)).Msg(op)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)

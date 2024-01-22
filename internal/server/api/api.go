@@ -123,28 +123,6 @@ func checkCredentials(next http.Handler) http.Handler {
 }
 
 func RunAPI(urlStr string) error {
-	//logger := httplog.NewLogger("httplog", httplog.Options{
-	//	LogLevel: slog.LevelDebug,
-	//	//JSON:             true,
-	//	Concise:          false,
-	//	RequestHeaders:   true,
-	//	ResponseHeaders:  true,
-	//	MessageFieldName: "msg",
-	//	//LevelFieldName:   "severity",
-	//	TimeFieldFormat: time.RFC3339,
-	//	Tags: map[string]string{
-	//		"version": "v1.0",
-	//		"env":     "dev",
-	//	},
-
-	//QuietDownRoutes: []string{
-	//	"/",
-	//	"/ping",
-	//},
-	//QuietDownPeriod: 10 * time.Second,
-	//SourceFieldName: "source",
-	//})
-
 	mux := chi.NewRouter()
 	mux.Use(middleware.RequestID)
 	mux.Use(middleware.Recoverer)

@@ -4,12 +4,18 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/pochtalexa/go-cti-middleware/internal/agent/flags"
-	"github.com/pochtalexa/go-cti-middleware/internal/agent/storage"
-	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
 	"strconv"
+)
+
+import (
+	"github.com/rs/zerolog/log"
+)
+
+import (
+	"github.com/pochtalexa/go-cti-middleware/internal/agent/flags"
+	"github.com/pochtalexa/go-cti-middleware/internal/agent/storage"
 )
 
 func Login() error {
@@ -50,11 +56,13 @@ func Login() error {
 	}
 
 	dec := json.NewDecoder(res.Body)
-	if err := dec.Decode(&tokenString); err != nil {
+	if err = dec.Decode(&tokenString); err != nil {
 		log.Error().Str("op", op).Err(err).Msg("Decode")
 	}
 
-	storage.AppConfig.TokenString = tokenString.Token
+	if err = storage.AppConfig.SetToken(tokenString.Token); err != nil {
+		log.Error().Str("op", op).Err(err).Msg("SetToken")
+	}
 
 	return nil
 }
@@ -65,7 +73,7 @@ func Refresh() error {
 	var tokenString storage.StTokenString
 
 	req, _ := http.NewRequest(http.MethodGet, storage.AppConfig.ApiRoutes.Refresh, nil)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.TokenString))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", storage.AppConfig.GetToken()))
 	res, err := storage.AppConfig.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
@@ -91,11 +99,13 @@ func Refresh() error {
 		log.Error().Str("op", op).Err(err).Msg("Decode")
 	}
 
-	storage.AppConfig.TokenString = tokenString.Token
+	log.Info().Str("op", op).Str("storage.AppConfig.tokenString", storage.AppConfig.GetToken()).Msg("Old")
 
-	log.Info().Str("storage.AppConfig.TokenString", storage.AppConfig.TokenString).Msg("Old")
-	log.Info().Str("tokenString.Token", tokenString.Token).Msg("New")
+	if err = storage.AppConfig.SetToken(tokenString.Token); err != nil {
+		log.Error().Str("op", op).Err(err).Msg("SetToken")
+	}
 
+	log.Info().Str("op", op).Str("tokenString.Token", tokenString.Token).Msg("New")
 	log.Info().Str("op", op).Msg("ok")
 
 	return nil

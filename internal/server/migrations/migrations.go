@@ -3,8 +3,14 @@ package migrations
 import (
 	"embed"
 	"fmt"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
+)
+
+import (
 	"github.com/pressly/goose/v3"
+)
+
+import (
+	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 )
 
 //go:embed *.sql

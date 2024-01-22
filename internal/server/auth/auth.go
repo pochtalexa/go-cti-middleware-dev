@@ -42,8 +42,6 @@ func NewToken(agent *storage.StAgent, duration time.Duration) (string, error) {
 }
 
 func RegisterNewUser(login string, password string, curStorage IntStorage) (int64, error) {
-	// op (operation) - имя текущей функции и пакета. Такую метку удобно
-	// добавлять в логи и в текст ошибок, чтобы легче было искать хвосты
 	const op = "auth.RegisterNewUser"
 
 	// Создаём локальный объект логгера с доп. полями, содержащими полезную инфу

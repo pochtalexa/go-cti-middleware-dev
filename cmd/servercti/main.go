@@ -2,6 +2,11 @@ package main
 
 import (
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+)
+
+import (
 	"github.com/pochtalexa/go-cti-middleware/internal/server/api"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/cti"
@@ -9,8 +14,6 @@ import (
 	"github.com/pochtalexa/go-cti-middleware/internal/server/migrations"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/ws"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 func main() {

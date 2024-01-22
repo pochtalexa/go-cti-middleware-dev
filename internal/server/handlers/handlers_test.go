@@ -4,14 +4,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/handlers"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/ws/mocks"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+)
+
+import (
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+)
+
+import (
+	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/ws/mocks"
 )
 
 func TestControlHandler(t *testing.T) {
@@ -53,7 +58,7 @@ func TestEventsHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testAgentsInfo := mocks.NewIntAgent(t)
-			handlers.AgentsInfo = testAgentsInfo
+			AgentsInfo = testAgentsInfo
 
 			// TODO: описать вызовы AgentsInfo
 

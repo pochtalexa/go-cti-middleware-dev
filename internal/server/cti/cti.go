@@ -203,3 +203,26 @@ func Mute(rid string, login string, cid int, on bool) error {
 
 	return nil
 }
+
+func MakeCall(rid string, login string, phoneNumber string) error {
+	messMakeCall := storage.NewWsCommand()
+	messMakeCall.Rid = rid
+	messMakeCall.Name = "MakeCall"
+	messMakeCall.Login = login
+	messMakeCall.PhoneNumber = phoneNumber
+
+	body, err := json.Marshal(messMakeCall)
+	if err != nil {
+		return fmt.Errorf("MakeCall - marshal: %w", err)
+	}
+
+	log.Info().Str("messMakeCall", messMakeCall.String()).Msg("MakeCall")
+
+	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
+		return fmt.Errorf("MakeCall: %w", err)
+	}
+
+	log.Info().Str("login", login).Msg("MakeCall - ok")
+
+	return nil
+}
