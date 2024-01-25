@@ -6,15 +6,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
+
 	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/handlers"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 	"github.com/rs/zerolog/log"
-	"net/http"
-	"strings"
 )
 
 // проверяем, что клиент отправил серверу сжатые данные в формате gzip

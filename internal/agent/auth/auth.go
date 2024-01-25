@@ -7,19 +7,42 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-)
+	"time"
 
-import (
 	"github.com/rs/zerolog/log"
-)
 
-import (
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/flags"
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/storage"
 )
 
+func GetAuthorization() error {
+	const op = "auth.GetAuthorization"
+	authCounter := 0
+
+	tickerAuth := time.NewTicker(time.Millisecond * 1000)
+	for range tickerAuth.C {
+		if authCounter >= 10 {
+			tickerAuth.Stop()
+			return fmt.Errorf("%s: can not authorize", op)
+		}
+
+		if err := Login(); err != nil {
+			log.Error().Str("op", op).Err(err).Msg("Login")
+			storage.AppConfig.DisplayErrCh <- fmt.Sprintf("login error. attempt %d from 10", authCounter)
+			authCounter++
+			continue
+		}
+		break
+
+	}
+	tickerAuth.Stop()
+
+	return nil
+}
+
 func Login() error {
 	const op = "auth.Login"
+
 	var tokenString storage.StTokenString
 
 	buf := bytes.Buffer{}
@@ -68,8 +91,8 @@ func Login() error {
 }
 
 func Refresh() error {
-
 	const op = "auth.Refresh"
+
 	var tokenString storage.StTokenString
 
 	req, _ := http.NewRequest(http.MethodGet, storage.AppConfig.ApiRoutes.Refresh, nil)

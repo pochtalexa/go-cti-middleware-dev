@@ -3,8 +3,9 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 )
 
 var (

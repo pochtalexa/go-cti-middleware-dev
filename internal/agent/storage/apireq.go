@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/flags"
 )
 

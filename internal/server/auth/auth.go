@@ -3,12 +3,14 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
-	"time"
+
+	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 )
 
 var (

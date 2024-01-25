@@ -3,16 +3,18 @@ package cti
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/ws"
-	"github.com/rs/zerolog/log"
 	"math/rand"
 	"net/url"
 	"slices"
 	"strconv"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/rs/zerolog/log"
+
+	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/ws"
 )
 
 func getRandRid() string {
@@ -58,7 +60,7 @@ func InitCTISess() error {
 		return fmt.Errorf("messInitConn - marshal: %w", err)
 	}
 
-	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
+	if err = ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
 		return fmt.Errorf("initCTISess: %w", err)
 	}
 
@@ -79,7 +81,7 @@ func AttachUser(login string) error {
 		return fmt.Errorf("messAttachUser - marshal: %w", err)
 	}
 
-	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
+	if err = ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
 		return fmt.Errorf("AttachUser: %w", err)
 	}
 
@@ -104,7 +106,7 @@ func ChangeStatus(rid string, login string, status string) error {
 		return fmt.Errorf("ChangeStatus - marshal: %w", err)
 	}
 
-	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
+	if err = ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
 		return fmt.Errorf("ChangeStatus: %w", err)
 	}
 
@@ -126,7 +128,7 @@ func Answer(rid string, login string, cid int) error {
 		return fmt.Errorf("answer - marshal: %w", err)
 	}
 
-	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
+	if err = ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
 		return fmt.Errorf("Answer: %w", err)
 	}
 
@@ -148,7 +150,7 @@ func Hangup(rid string, login string, cid int) error {
 		return fmt.Errorf("hangup - marshal: %w", err)
 	}
 
-	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
+	if err = ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
 		return fmt.Errorf("Hangup: %w", err)
 	}
 
@@ -170,7 +172,7 @@ func Close(rid string, login string, cid int) error {
 		return fmt.Errorf("close - marshal: %w", err)
 	}
 
-	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
+	if err = ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
 		return fmt.Errorf("close: %w", err)
 	}
 
@@ -195,7 +197,7 @@ func Mute(rid string, login string, cid int, on bool) error {
 
 	log.Info().Str("messMute", messMute.String()).Msg("Mute")
 
-	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
+	if err = ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
 		return fmt.Errorf("Mute: %w", err)
 	}
 
@@ -218,7 +220,7 @@ func MakeCall(rid string, login string, phoneNumber string) error {
 
 	log.Info().Str("messMakeCall", messMakeCall.String()).Msg("MakeCall")
 
-	if err := ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
+	if err = ws.SendCommand(config.ServerConfig.WsConn, body); err != nil {
 		return fmt.Errorf("MakeCall: %w", err)
 	}
 

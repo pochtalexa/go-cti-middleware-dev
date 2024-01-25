@@ -1,2 +1,1 @@
-rem go run main.go 2>stderr.txt
-go_build_agent.exe 2>stderr.txt
+go_build_agent.exe -a 192.168.223.50:9595

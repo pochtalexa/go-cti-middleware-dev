@@ -2,13 +2,19 @@ package auth
 
 import (
 	"fmt"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/auth/mocks"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
-	"github.com/stretchr/testify/mock"
 	"strings"
 	"testing"
 	"time"
+)
+
+import (
+	"github.com/stretchr/testify/mock"
+)
+
+import (
+	"github.com/pochtalexa/go-cti-middleware/internal/server/auth/mocks"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 )
 
 func TestLogin(t *testing.T) {

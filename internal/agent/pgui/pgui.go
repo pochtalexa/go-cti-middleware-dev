@@ -9,15 +9,11 @@ import (
 	"regexp"
 	"strconv"
 	"time"
-)
 
-import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/rs/zerolog/log"
-)
 
-import (
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/auth"
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/flags"
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/storage"
@@ -246,6 +242,14 @@ func call() {
 	return
 }
 
+func reconnect() {
+	const op = "pgui.reconnect"
+
+	if err := auth.GetAuthorization(); err != nil {
+		log.Debug().Str("op", op).Err(err).Msg("")
+	}
+}
+
 func getRandRid() string {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 
@@ -370,6 +374,7 @@ func newCallForm(title string) *tview.Form {
 	form.AddInputField("Num:", "", 20, newCallFormValidateInput, nil)
 	form.AddButton("Call", call)
 	form.AddButton("Hang", hangup)
+	form.AddButton("ReConn", reconnect)
 	form.MouseHandler()
 
 	return form

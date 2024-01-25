@@ -10,15 +10,11 @@ import (
 	"os"
 	"strings"
 	"time"
-)
 
-import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/sethvargo/go-retry"
-)
 
-import (
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/auth"
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/flags"
 	"github.com/pochtalexa/go-cti-middleware/internal/agent/logger"
@@ -47,6 +43,8 @@ func footerSetText() {
 
 // TODO: добавить логику авторизации и регистрации по флагам
 func main() {
+	const op = "main"
+
 	fileLogger := logger.InitFileLogger()
 	defer logPanic(fileLogger)
 
@@ -60,30 +58,15 @@ func main() {
 	storage.InitDisplayCh()
 
 	go pgui.Init()
-
 	go footerSetText()
 
-	// пробуем авторизоваться
-	tickerAuth := time.NewTicker(time.Millisecond * 1000)
-	defer tickerAuth.Stop()
-	authCounter := 0
-	for range tickerAuth.C {
-		if authCounter >= 10 {
-			log.Fatal().Err(errors.New("can not authorise")).Msg("auth")
-		}
-
-		if err := auth.Login(); err != nil {
-			log.Error().Err(err).Msg("Login")
-			storage.AppConfig.DisplayErrCh <- fmt.Sprintf("login error. attempt %d from 10", authCounter)
-			authCounter++
-			continue
-		}
-		break
+	// пробуем авторизоваться с ограничение по кол-ву попыток
+	if err := auth.GetAuthorization(); err != nil {
+		log.Fatal().Str("op", op).Err(err).Msg("")
 	}
-	tickerAuth.Stop()
 
 	// по таймеру запрашиваем новые метрики
-	tickerMain := time.NewTicker(time.Millisecond * 5000)
+	tickerMain := time.NewTicker(time.Millisecond * time.Duration(flags.Polling))
 	defer tickerMain.Stop()
 	for range tickerMain.C {
 		const op = "main loop"
@@ -109,19 +92,27 @@ func main() {
 			defer res.Body.Close()
 
 			if res.StatusCode != http.StatusOK {
+				switch res.StatusCode {
 				// нет новых данных
-				if res.StatusCode == http.StatusNoContent {
+				case http.StatusNoContent:
+					log.Debug().Str("op", op).Err(err).Msg("StatusNoContent")
 					return fmt.Errorf("%s: StatusNoContent", op)
-				}
-				if res.StatusCode == http.StatusUnauthorized {
+				case http.StatusUnauthorized:
 					if err = auth.Refresh(); err != nil {
-						return fmt.Errorf("%s:Refresh: %w", op, err)
+						return fmt.Errorf("%s: Refresh: %w", op, err)
 					}
+				case http.StatusNotFound:
+					if err = auth.GetAuthorization(); err != nil {
+						return fmt.Errorf("%s: StatusNotFound: %w", op, err)
+					}
+				default:
+					return fmt.Errorf("%s: StatusCode default", op)
 				}
 			}
 
 			dec := json.NewDecoder(res.Body)
 			if err = dec.Decode(&tempAgentEvents); err != nil {
+				log.Debug().Str("op", op).Err(err).Str("res.Body", fmt.Sprintln(res.Body)).Msg("")
 				return retry.RetryableError(fmt.Errorf("%w. jsonDecodeError", err))
 			}
 

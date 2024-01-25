@@ -2,11 +2,14 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/gorilla/websocket"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/rs/zerolog/log"
-	"os"
-	"time"
+
+	"github.com/pochtalexa/go-cti-middleware/internal/server/flags"
 )
 
 type Config struct {
@@ -23,6 +26,7 @@ type Settings struct {
 	LogLevel string
 	UseAuth  bool
 	TokenTTL int64
+	LogPath  string
 }
 
 type CtiAPI struct {
@@ -58,20 +62,22 @@ func Init() {
 }
 
 func (c *Config) ReadConfigFile() error {
-	fileName := "config.toml"
+	const op = "config.ReadConfigFile"
+	fileName := flags.CfgPath
 
 	file, err := os.ReadFile(fileName)
 	if err != nil {
-		return fmt.Errorf("ReadFile: %w", err)
+		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	if err := toml.Unmarshal(file, c); err != nil {
+	if err = toml.Unmarshal(file, c); err != nil {
 		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	c.DB.DBConn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		c.DB.Host, c.DB.Port, c.DB.User, c.DB.Password, c.DB.DBname)
 
+	// TODO: хранить токен во вне
 	c.Secret = "your-256-bit-secret"
 
 	c.TokenTTL = time.Duration(c.Settings.TokenTTL) * time.Minute

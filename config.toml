@@ -1,9 +1,10 @@
 [Settings]
  LogLevel = "debug"
 #LogLevel = "info"
-UseAuth = true
+UseAuth = false
 # TokenTTL min
 TokenTTL = 1
+LogPath = "server_cti.log"
 
 [CtiAPI]
 Scheme = "ws"

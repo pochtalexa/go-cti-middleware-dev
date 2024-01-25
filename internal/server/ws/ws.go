@@ -3,12 +3,14 @@ package ws
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
-	"github.com/rs/zerolog/log"
 	"slices"
 	"sync"
+
+	"github.com/gorilla/websocket"
+	"github.com/rs/zerolog/log"
+
+	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 )
 
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=IntAgent

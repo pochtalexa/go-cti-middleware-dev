@@ -4,20 +4,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/rs/zerolog/log"
+
 	"github.com/pochtalexa/go-cti-middleware/internal/server/auth"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/cti"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/ws"
-	"github.com/rs/zerolog/log"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
 )
 
+// AgentsInfo чтобы не передавать интерфейс отдельным агрументов в хендлеры
 var AgentsInfo ws.IntAgent
 
 func Init() {
@@ -159,6 +162,12 @@ func EventsHandler(w http.ResponseWriter, r *http.Request) {
 func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.RegisterUserHandler"
 
+	if !config.ServerConfig.Settings.UseAuth {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, "no auth set", http.StatusBadRequest)
+		return
+	}
+
 	reqBody := storage.NewCredentials()
 
 	dec := json.NewDecoder(r.Body)
@@ -195,24 +204,33 @@ func RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.LoginHandler"
+	var (
+		token string
+		err   error
+	)
 
 	reqBody := storage.NewCredentials()
 
 	dec := json.NewDecoder(r.Body)
-	if err := dec.Decode(&reqBody); err != nil {
+	if err = dec.Decode(&reqBody); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Error().Err(err).Msg(op)
 		return
 	}
 
-	token, err := auth.Login(reqBody.Login, reqBody.Password, storage.Storage)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Error().Err(err).Msg(op)
-		return
+	useAuth := config.ServerConfig.Settings.UseAuth
+	if useAuth {
+		token, err = auth.Login(reqBody.Login, reqBody.Password, storage.Storage)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			log.Error().Err(err).Msg(op)
+			return
+		}
+	} else {
+		token = "no_auth_token"
 	}
 
-	if err := cti.AttachUser(reqBody.Login); err != nil {
+	if err = cti.AttachUser(reqBody.Login); err != nil {
 		log.Fatal().Str("op", op).Err(err).Msg("ws AttachUser")
 	}
 
@@ -224,13 +242,13 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	if err := enc.Encode(resBody); err != nil {
+	if err = enc.Encode(resBody); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Error().Err(err).Msg(op)
 		return
 	}
 
-	log.Debug().Str("login", reqBody.Login).Msg(fmt.Sprintf("login success: %s", op))
+	log.Debug().Bool("useAuth", useAuth).Str("login", reqBody.Login).Msg(fmt.Sprintf("%s: login - ok ", op))
 
 	return
 }
@@ -240,7 +258,7 @@ func RefreshHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !config.ServerConfig.Settings.UseAuth {
 		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, "no refresh needed", http.StatusBadRequest)
+		http.Error(w, "no auth set. no refresh needed", http.StatusBadRequest)
 		return
 	}
 
