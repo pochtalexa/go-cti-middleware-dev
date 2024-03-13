@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/flags"
-	"github.com/pochtalexa/go-cti-middleware/internal/server/logger"
 	"os"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -13,7 +11,9 @@ import (
 	"github.com/pochtalexa/go-cti-middleware/internal/server/api"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/config"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/cti"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/flags"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/handlers"
+	"github.com/pochtalexa/go-cti-middleware/internal/server/logger"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/migrations"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/storage"
 	"github.com/pochtalexa/go-cti-middleware/internal/server/ws"
@@ -28,14 +28,14 @@ func logPanic(multiLogger *os.File) {
 	multiLogger.Close()
 }
 
+// TODO на перспективу использовать Redis
 func main() {
 	// TODO тесты
 	// TODO Обработка ошибок
 	// TODO обработка ответа CTI на отправленные команды
-	// TODO на перспективу использовать Redis
-
 	// TODO: добавить флаг - была ли подписка на агента по логину - актуально, когда работаем без авторизации
 	// и сервер перезагрузился
+	// TODO: обработать обрыв связи с CTI API
 
 	const op = "main"
 
@@ -73,7 +73,7 @@ func main() {
 
 	handlers.Init()
 
-	err := cti.Init()
+	err := cti.WSInit()
 	if err != nil {
 		log.Fatal().Err(err).Msg("cti.Init")
 	}
@@ -81,12 +81,12 @@ func main() {
 
 	go ws.ReadMessage(storage.AgentsInfo)
 
-	if err := cti.InitCTISess(); err != nil {
+	if err = cti.InitCTISess(); err != nil {
 		log.Fatal().Err(err).Msg("InitCTISess")
 	}
 
 	uHTTP := config.ServerConfig.HttpAPI.Host + ":" + config.ServerConfig.HttpAPI.Port
-	if err := api.RunAPI(uHTTP); err != nil {
+	if err = api.RunAPI(uHTTP); err != nil {
 		log.Fatal().Err(err).Msg("RunAPI")
 	}
 }

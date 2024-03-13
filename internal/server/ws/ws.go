@@ -42,8 +42,10 @@ func SendCommand(c *websocket.Conn, body []byte) error {
 func ReadMessage(agentsInfo IntAgent) {
 	const op = "ws.ReadMessage"
 
+	// TODO: проверить условие
+	wsEvent := storage.NewWsEvent()
+
 	for {
-		wsEvent := storage.NewWsEvent()
 		_, message, err := config.ServerConfig.WsConn.ReadMessage()
 		if err != nil {
 			log.Error().Str("op", op).Err(err).Msg("ReadMessage")
@@ -72,6 +74,7 @@ func ReadMessage(agentsInfo IntAgent) {
 				Str("message body", fmt.Sprintln(wsEvent.Body)).
 				Msg("wsReadMessage")
 		}
+
 		log.Debug().Str("op", op).
 			Str("Name", wsEvent.Name).
 			Str("Login", wsEvent.Login).

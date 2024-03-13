@@ -29,7 +29,7 @@ func getRandRid() string {
 	return id
 }
 
-func Init() error {
+func WSInit() error {
 	var err error
 
 	uCTI := url.URL{

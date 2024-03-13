@@ -126,8 +126,8 @@ func checkCredentials(next http.Handler) http.Handler {
 
 func RunAPI(urlStr string) error {
 	mux := chi.NewRouter()
-	mux.Use(middleware.RequestID)
-	mux.Use(middleware.Recoverer)
+	//mux.Use(middleware.RequestID)
+	//mux.Use(middleware.Recoverer)
 	mux.Use(GzipDecompression)
 	mux.Use(middleware.Compress(flate.DefaultCompression, "application/json", "text/html"))
 	//mux.Use(middleware.Logger)

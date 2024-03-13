@@ -1,5 +1,5 @@
 [Settings]
- LogLevel = "debug"
+LogLevel = "debug"
 #LogLevel = "info"
 UseAuth = false
 # TokenTTL min

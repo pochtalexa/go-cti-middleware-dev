@@ -42,6 +42,7 @@ func footerSetText() {
 }
 
 // TODO: добавить логику авторизации и регистрации по флагам
+// TODO: сделать help по флагам
 func main() {
 	const op = "main"
 
